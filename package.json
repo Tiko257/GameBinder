@@ -3,10 +3,56 @@
   "version": "0.79.0",
   "private": true,
   "type": "module",
-  "scripts": {"start": "electron .", "web": "node server.js", "dist": "electron-builder --win"},
-  "dependencies": {"dotenv": "^16.4.7", "express": "^4.21.2"},
+  "scripts": {
+    "start": "electron .",
+    "web": "node server.js",
+    "dist": "electron-builder --win"
+  },
+  "dependencies": {
+    "dotenv": "^16.4.7",
+    "express": "^4.21.2"
+  },
   "description": "GameBinder - Steam library printable cards",
   "main": "main.js",
-  "devDependencies": {"electron": "^38.1.0", "electron-builder": "^26.0.12"},
-  "build": {"appId":"com.gamebinder.app","productName":"GameBinder","asar":true,"files":["main.js","preload.cjs","server.js","public/**/*","package.json",".env.example","README.md"],"extraMetadata":{"main":"main.js"},"win":{"target":[{"target":"nsis","arch":["x64"]}]},"nsis":{"oneClick":false,"perMachine":false,"allowToChangeInstallationDirectory":true,"createDesktopShortcut":true,"createStartMenuShortcut":true,"shortcutName":"GameBinder"},"artifactName":"GameBinder-Setup-${version}.${ext}"}
+  "devDependencies": {
+    "electron": "^38.1.0",
+    "electron-builder": "^26.0.12"
+  },
+  "build": {
+    "appId": "com.gamebinder.app",
+    "productName": "GameBinder",
+    "asar": true,
+    "files": [
+      "main.js",
+      "preload.cjs",
+      "server.js",
+      "public/**/*",
+      "package.json",
+      ".env.example",
+      "README.md"
+    ],
+    "extraMetadata": {
+      "main": "main.js"
+    },
+    "win": {
+      "target": [
+        {
+          "target": "nsis",
+          "arch": [
+            "x64"
+          ]
+        }
+      ],
+      "artifactName": "GameBinder-Setup-${version}.${ext}"
+    },
+    "nsis": {
+      "oneClick": false,
+      "perMachine": false,
+      "allowToChangeInstallationDirectory": true,
+      "createDesktopShortcut": true,
+      "createStartMenuShortcut": true,
+      "shortcutName": "GameBinder"
+    },
+    "artifactName": "GameBinder-Setup-${version}.${ext}"
+  }
 }

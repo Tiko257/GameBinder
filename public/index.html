@@ -1,0 +1,1839 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>GameBinder — Prototype 1</title>
+<style>
+@import url("https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&display=swap");
+:root{--bg:#0f1115;--panel:#181b21;--line:#303640;--text:#f5f7fa;--muted:#9da5b1;--blue:#3b82f6}
+*{box-sizing:border-box}body{margin:0;background:var(--bg);color:var(--text);font-family:"Space Grotesk",system-ui,-apple-system,"Segoe UI",sans-serif}
+header{position:sticky;top:0;background:#0f1115ee;backdrop-filter:blur(10px);border-bottom:1px solid var(--line);z-index:5}
+.top,.controls,main{max-width:1200px;margin:auto}.top{padding:18px 24px;display:flex;align-items:center}.logo{font-size:28px;font-weight:800}.logo span{color:#3b82f6}.stats{margin-left:auto;color:var(--muted);font-size:14px}
+.controls{padding:0 24px 18px;display:flex;gap:10px;flex-wrap:wrap}.controls input{flex:1;min-width:220px}.controls input,.controls select{background:var(--panel);border:1px solid var(--line);border-radius:10px;color:var(--text);padding:11px 13px}
+button{border-radius:10px;padding:11px 15px;border:1px solid var(--line);background:#222730;color:white;font-weight:700;cursor:pointer;transition:background-color .15s ease,border-color .15s ease,filter .15s ease,transform .15s ease}button:hover:not(:disabled){background:#2b313a;border-color:#59636e;filter:brightness(1.08)}button:active:not(:disabled){transform:translateY(1px);filter:brightness(.98)}button:focus-visible{outline:2px solid #7f8a96;outline-offset:2px}.primary{background:var(--blue);border-color:var(--blue)}button.primary:hover:not(:disabled){background:#4b8ff7;border-color:#6aa3ff}.controls #sync{background:#222730;border-color:var(--line)}.controls #sync:hover:not(:disabled){background:#2b313a;border-color:#59636e}
+main{padding:20px 24px 50px}.status{color:var(--muted);font-size:13px;margin-bottom:20px}.statusbar{display:flex;align-items:center;gap:14px;flex-wrap:wrap}.statusbar .meter{width:180px;height:6px;background:#2a2f38;overflow:hidden;border-radius:3px}.statusbar .meter>i{display:block;height:100%;width:0;background:var(--blue);transition:width .2s}.statusbar .status-counts{font-variant-numeric:tabular-nums}
+.grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(190px,1fr));gap:20px}.wrap{height:300px;perspective:1000px;cursor:pointer}
+.card{height:100%;width:100%;position:relative;transform-style:preserve-3d;transition:transform .55s cubic-bezier(.2,.75,.2,1),filter .2s,box-shadow .2s;will-change:transform}
+@media(hover:hover) and (pointer:fine){.wrap:hover .card:not(.flip){transform:translateY(-8px) scale(1.015);filter:brightness(1.035);box-shadow:0 22px 42px rgba(0,0,0,.34)}}
+.card.flip{transform:rotateY(180deg)}
+.face{position:absolute;inset:0;backface-visibility:hidden;border-radius:0;overflow:hidden;border:1px solid #414754;box-shadow:0 16px 35px #0006}
+.card.click-feedback .face{animation:clickFlash .28s ease-out}
+@keyframes clickFlash{0%{filter:brightness(1)}35%{filter:brightness(1.35) saturate(1.08)}100%{filter:brightness(1)}}
+.front{background:#20242b;display:flex;align-items:flex-end}.front img{width:100%;height:100%;object-fit:cover}.front img.art-horizontal{object-fit:contain;transform:rotate(90deg) scale(var(--horizontal-art-scale,1));transform-origin:center center}
+.back{transform:rotateY(180deg);background-color:#1b2026;background-image:url('/gamebinder-starfield-neutral.jpg');background-size:cover;background-position:center;background-repeat:no-repeat;color:#edf1f5;padding:0;display:flex;flex-direction:column;border:1px solid #7d8791;box-shadow:inset 0 0 0 3px #1b2026,inset 0 0 0 4px var(--back-inner-frame-color)}.back-header{background:transparent;color:#f3f5f7;padding:13px 13px 8px;text-align:center;flex:0 0 auto}.back-header h2{margin:0;font-size:18px;line-height:1.02;text-align:center;letter-spacing:-.025em}.back-header h2.title-medium{font-size:16px}.back-header h2.title-long{font-size:14px}.app-id-header{font-family:"Terminal",monospace;font-size:7px;color:#a2acb6;text-align:center;letter-spacing:.1em;margin-top:3px}.year{color:#9aa5b0;font-weight:600;font-size:8px;letter-spacing:.12em;text-align:center;margin:7px 0 0;display:flex;align-items:center;gap:7px;justify-content:center}.year:before,.year:after{content:"";height:1px;background:#68727d;flex:1 1 auto}.back-body{padding:3px 13px 9px;display:flex;flex-direction:column;flex:1 1 auto;min-height:0}.meta-grid{display:grid;grid-template-columns:1fr 1fr;gap:0;margin-top:4px}.detail-cell{min-width:0;padding:0 8px 0 0}.detail-cell+ .detail-cell{border-left:1px solid #69737e;padding:0 0 0 10px}.meta{font-size:7px;font-weight:800;color:#a3adb8;letter-spacing:.14em;margin-top:4px}.about-block>.meta,.optional-cell>.meta{text-align:center}.value{font-size:10px;line-height:1.2;color:#eef1f4;white-space:normal;overflow:hidden}.content-group{display:flex;flex-direction:column;justify-content:center;flex:1 1 auto;min-height:0;overflow:hidden}.about-block{display:flex;flex-direction:column;flex:0 0 auto;min-height:0;margin-top:11px}.desc{font-size:8.7px;line-height:1.28;margin-top:5px;text-align:justify;color:#e3e7eb;flex:0 0 auto;min-height:0;overflow:hidden;display:block}.optional-grid{display:grid;grid-template-columns:1fr;gap:0;margin-top:9px;flex:0 0 auto}.optional-cell{min-width:0}.optional-value{font-size:8.1px;line-height:1.22;color:#e3e7eb;text-align:center;margin-top:5px;overflow:visible;display:block;white-space:normal;overflow-wrap:anywhere}.bottom{margin-top:auto}.back-footer{background:transparent;color:#9aa5b0;padding:5px 13px 8px;flex:0 0 auto}.back-footer .print-bottom{position:relative;border-top:1px solid #68727d;padding-top:5px}.datamatrix-mark{position:absolute;left:50%;right:auto;top:0;transform:translate(-50%,-50%);width:20px;height:20px;padding:0;background:#fff;line-height:0;z-index:2}.datamatrix-mark svg{display:block;width:100%;height:100%;shape-rendering:crispEdges}.id{font-family:"Terminal",monospace;font-size:7px;color:#a2acb6;text-align:center;letter-spacing:.1em}
+.art-placeholder{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;padding:20px;background:#20242b;color:#9da5b1;text-align:center;font-weight:700}.art-placeholder span{max-width:85%}.print-pages{display:none}.print-sheet{display:none}.empty{text-align:center;color:var(--muted);padding:70px;display:none}
+@media(max-width:600px){.grid{grid-template-columns:repeat(2,1fr);gap:12px}.wrap{height:260px}.stats{display:none}}
+@media print{
+  @page{size:A4 portrait;margin:0}
+  html,body{margin:0!important;padding:0!important;background:white!important;color:#000!important;-webkit-print-color-adjust:exact;print-color-adjust:exact}
+  header,.status,.empty,#gb-credentials-settings{display:none!important}
+  main{padding:0!important;margin:0!important;max-width:none!important}
+  .grid{display:grid!important;grid-template-columns:repeat(3,63mm)!important;grid-auto-rows:88mm;gap:4mm!important;justify-content:center!important;align-content:start!important;padding-top:8mm!important}
+  .wrap{width:63mm!important;height:88mm!important;perspective:none!important;cursor:default!important;page-break-inside:avoid!important;break-inside:avoid!important}
+  .card{width:63mm!important;height:88mm!important;transform:none!important;transition:none!important;transform-style:flat!important;will-change:auto!important}
+  .face{position:absolute!important;inset:0!important;backface-visibility:visible!important;transform:none!important;box-shadow:none!important}
+  .front{display:flex!important;position:absolute!important;inset:0!important;background:#20242b!important;overflow:hidden!important}
+  .front img{display:block!important;visibility:visible!important;width:100%!important;height:100%!important;object-fit:cover!important}
+  .front img.art-horizontal{object-fit:contain!important;transform:rotate(90deg) scale(var(--horizontal-art-scale,1))!important;transform-origin:center center!important}
+    .back{display:flex!important;position:absolute!important;inset:0!important;background:#1b2026!important;color:#edf1f5!important;padding:0!important;border:1px solid #7d8791!important;border-radius:0!important;box-shadow:inset 0 0 0 1.2mm #1b2026,inset 0 0 0 1.55mm var(--back-inner-frame-color)!important}.back .back-header{background:transparent!important;color:#f3f5f7!important;padding:3.2mm 3.3mm 2mm!important}.back h2{font-size:4.76mm!important;line-height:1.02!important}.back h2.title-medium{font-size:4.23mm!important}.back h2.title-long{font-size:3.70mm!important}.print-app-id{font-family:"Terminal",monospace!important;font-size:1.9mm!important;color:var(--back-app-id-color)!important;text-align:center!important;letter-spacing:.1em!important;margin-top:.8mm!important}.back .year{font-size:2.35mm!important;letter-spacing:.12em!important;margin:2.1mm 0 0!important;color:#9aa5b0!important;display:flex!important;align-items:center!important;gap:1.8mm!important}.back .year:before,.back .year:after{content:""!important;height:.25mm!important;background:#68727d!important;flex:1 1 auto!important}.back .back-body{padding:0 3.3mm 2.2mm!important}.back .meta-grid{display:grid!important;grid-template-columns:1fr 1fr!important;margin-top:1.1mm!important}.back .detail-cell{padding:0 2mm 0 0!important}.back .detail-cell+.detail-cell{border-left:.25mm solid #69737e!important;padding:0 0 0 2.4mm!important}.back .meta{font-size:2.05mm!important;margin-top:1.1mm!important;color:#a3adb8!important;letter-spacing:.14em!important}.back .value{font-size:2.8mm!important;line-height:1.2!important}.back .about-block{margin-top:3.1mm!important}.back .desc{font-size:2.5mm!important;line-height:1.27!important;margin-top:1.25mm!important;text-align:justify!important;max-height:none!important;overflow:hidden!important;display:block!important;-webkit-line-clamp:unset!important}.print-back .optional-grid{display:grid!important;grid-template-columns:1fr!important;gap:0!important;margin-top:2.8mm!important;flex:0 0 auto!important}.print-back .optional-value{font-size:2.3mm!important;line-height:1.22!important;color:#e3e7eb!important;text-align:center!important;margin-top:1.2mm!important;overflow:visible!important;display:block!important;white-space:normal!important;overflow-wrap:anywhere!important}.back .back-footer{background:transparent!important;color:#9aa5b0!important;padding:1.4mm 3.3mm 2.1mm!important;border-top:.25mm solid #68727d!important}.back .id{font-size:1.9mm!important;color:var(--back-app-id-color)!important;letter-spacing:.1em!important}
+  #grid{display:none!important}
+  #printPages{display:block!important}
+  .print-sheet{width:210mm!important;height:297mm!important;display:grid!important;grid-template-columns:repeat(3,63mm)!important;grid-template-rows:repeat(3,88mm)!important;gap:4mm!important;justify-content:center!important;align-content:start!important;padding-top:8mm!important;page-break-after:always!important;break-after:page!important}
+  .print-sheet:last-child{page-break-after:auto!important;break-after:auto!important}
+  .print-card{width:63mm!important;height:88mm!important;position:relative!important;overflow:hidden!important;border-radius:0!important;page-break-inside:avoid!important;break-inside:avoid!important}
+  .print-front{background:#20242b!important;border:1px solid #414754!important}
+  .print-front img{display:block!important;width:100%!important;height:100%!important;object-fit:cover!important}
+  .print-front img.art-horizontal{object-fit:contain!important;transform:rotate(90deg) scale(var(--horizontal-art-scale,1))!important;transform-origin:center center!important}
+  .print-back{background-color:#1b2026!important;background-image:url('/gamebinder-starfield-neutral.jpg')!important;background-size:cover!important;background-position:center!important;background-repeat:no-repeat!important;color:#edf1f5!important;border:.265mm solid #7d8791!important;padding:0!important;display:flex!important;flex-direction:column!important;box-shadow:inset 0 0 0 .794mm #1b2026,inset 0 0 0 1.058mm var(--back-inner-frame-color)!important}
+  .print-back{position:relative!important;overflow:hidden!important}
+  .print-back .back-header,.print-back .back-body,.print-back .back-footer{position:relative!important;z-index:1!important;background:transparent!important}
+  .print-back .back-header{background:transparent!important;color:#f3f5f7!important;padding:3.2mm 3.3mm 2mm!important;text-align:center!important;flex:0 0 auto!important}
+  .print-back .print-year:before,.print-back .print-year:after{content:""!important;height:.25mm!important;background:#68727d!important;flex:1 1 auto!important;display:block!important}
+  .print-back .back-body{background:transparent!important;color:#edf1f5!important;padding:0 3.3mm 2.2mm!important;display:flex!important;flex-direction:column!important;flex:1 1 auto!important;min-height:0!important}
+  .print-back .content-group{display:flex!important;flex-direction:column!important;justify-content:center!important;flex:1 1 auto!important;min-height:0!important;overflow:hidden!important}
+  .print-back .back-footer{background:transparent!important;color:#9aa5b0!important;padding:0 3.3mm 2.1mm!important;flex:0 0 auto!important;border-top:0!important}.print-back .print-bottom{position:relative!important;border-top:.25mm solid #68727d!important;padding-top:1.4mm!important}.print-back .datamatrix-mark{width:5mm!important;height:5mm!important;padding:0!important;background:#fff!important;right:auto!important;left:50%!important;transform:translate(-50%,-50%)!important}.print-back .datamatrix-mark svg{width:100%!important;height:100%!important;display:block!important;shape-rendering:crispEdges!important}
+  .print-back .back-footer{border-top:0!important}
+  .print-back .back-header h2{color:#f3f5f7!important}
+  .print-back .back-footer .print-id{color:#a2acb6!important}
+  .print-back h2{margin:0!important;font-size:4.76mm!important;line-height:1.02!important;text-align:center!important;letter-spacing:-.025em!important}.print-back h2.title-medium{font-size:4.23mm!important}.print-back h2.title-long{font-size:3.70mm!important}
+  .print-year{display:flex!important;align-items:center!important;justify-content:center!important;color:#9aa5b0!important;font-weight:600!important;font-size:2.35mm!important;letter-spacing:.12em!important;text-align:center!important;margin:2.1mm 0 0!important}
+  .print-meta{font-size:2.05mm!important;font-weight:800!important;color:#a3adb8!important;letter-spacing:.14em!important;margin-top:1.1mm!important}
+  .print-value{display:block!important;font-size:2.8mm!important;line-height:1.2!important;color:#eef1f4!important;white-space:normal!important;overflow:visible!important}.print-back .meta-grid{display:grid!important;grid-template-columns:1fr 1fr!important;margin-top:1.1mm!important}.print-back .detail-cell{min-width:0;padding:0 2mm 0 0!important}.print-back .detail-cell+.detail-cell{border-left:.25mm solid #69737e!important;padding:0 0 0 2.4mm!important}.print-back .print-meta{font-size:2.05mm!important;margin-top:1.1mm!important;color:#a3adb8!important;letter-spacing:.14em!important}.print-back .print-value{font-size:2.8mm!important;line-height:1.2!important}
+  .print-back .about-block{display:flex;flex-direction:column;flex:0 0 auto!important;min-height:0!important}.print-desc{display:block!important;font-size:2.5mm!important;line-height:1.27!important;margin-top:1.25mm!important;color:#e3e7eb!important;text-align:justify!important;flex:0 0 auto!important;min-height:0!important;overflow:hidden!important;box-sizing:border-box!important}
+  .print-bottom{margin-top:0!important;border-top:.25mm solid #68727d!important;padding-top:1.4mm!important}.print-id{font-family:"Terminal",monospace!important;font-size:2.3mm!important;color:#8e9aa7!important;text-align:center!important}
+  .print-sheet,.print-card,.print-back{visibility:visible!important;opacity:1!important}
+}
+.print-back .about-block[style*="display:none"]{display:none!important}
+@media print{#gb-print-progress{display:none!important}#gb-print-progress *{display:none!important}}\n
+/* V62: raise the lower FEATURES/footer group slightly so the divider and Data Matrix clear the inner bottom frame. */
+@media screen{.back-footer{padding-bottom:11px!important}.back-footer .datamatrix-mark{top:-4px!important}}
+@media print{.print-back .back-footer{padding-bottom:2.9mm!important}}
+
+#print-settings{position:fixed;inset:0;background:rgba(0,0,0,.72);display:none;align-items:center;justify-content:center;z-index:9999}
+#print-settings.open{display:flex}
+.print-settings-card{position:absolute;left:50%;top:50%;transform:translate(-50%,-50%);width:360px;max-width:calc(100vw - 40px);background:#20242b;border:1px solid #59636e;box-shadow:0 18px 60px rgba(0,0,0,.55);padding:22px;color:#edf1f5;margin:0}
+.print-settings-card h3{margin:0 0 8px;text-align:center;font-size:17px;letter-spacing:.02em}
+.print-settings-card p{margin:0 0 18px;text-align:center;color:#aab3bd;font-size:11px;line-height:1.45}
+.print-setting-row{display:flex;align-items:center;justify-content:space-between;gap:14px;margin-bottom:18px}
+.print-setting-row label{font-size:10px;font-weight:800;letter-spacing:.12em;color:#a3adb8}
+#print-paper-size{flex:1;background:#171b20;color:#edf1f5;border:1px solid #59636e;padding:9px 10px;font-size:12px}
+.print-settings-actions{display:flex;justify-content:flex-end;gap:9px}
+.print-settings-actions button{padding:8px 14px}
+#appid-generator{position:fixed;inset:0;background:rgba(0,0,0,.72);display:none;align-items:center;justify-content:center;z-index:9998}
+#appid-generator.open{display:flex}
+.appid-generator-card{width:390px;max-width:calc(100vw - 40px);background:#20242b;border:1px solid #59636e;box-shadow:0 18px 60px rgba(0,0,0,.55);padding:22px;color:#edf1f5}
+.appid-generator-card h3{margin:0 0 8px;text-align:center;font-size:17px;letter-spacing:.02em}
+.appid-generator-card p{margin:0 0 18px;text-align:center;color:#aab3bd;font-size:11px;line-height:1.45}
+.appid-generator-card label{display:block;margin-bottom:7px;font-size:10px;font-weight:800;letter-spacing:.12em;color:#a3adb8}
+#appid-generator-input{width:100%;background:#171b20;color:#edf1f5;border:1px solid #59636e;padding:10px 11px;font-size:14px;outline:none}
+#appid-generator-input:focus{border-color:#8c98a5}
+#appid-generator-status{min-height:18px;margin-top:8px;color:#aab3bd;font-size:11px;line-height:1.35}
+.appid-generator-actions{display:flex;justify-content:flex-end;gap:9px;margin-top:15px}
+.appid-generator-actions button{padding:8px 14px}
+#appid-preview{position:fixed;inset:0;background:rgba(0,0,0,.86);display:none;align-items:center;justify-content:center;z-index:9997}
+#appid-preview.open{display:flex}
+.appid-preview-panel{width:min(760px,calc(100vw - 32px));height:min(92vh,720px);background:#15181d;border:1px solid #59636e;box-shadow:0 22px 80px rgba(0,0,0,.65);display:flex;flex-direction:column;color:#edf1f5}
+.appid-preview-header{display:flex;align-items:center;justify-content:space-between;gap:14px;padding:15px 18px;border-bottom:1px solid #343a42}
+.appid-preview-header h3{margin:0;font-size:15px;letter-spacing:.04em}
+.appid-preview-subtitle{margin:3px 0 0;color:#9da6b1;font-size:10px}
+.appid-preview-actions{display:flex;gap:8px}
+.appid-preview-stage{flex:1;min-height:0;display:flex;align-items:center;justify-content:center;padding:22px;overflow:auto;background:#0d1014}
+.appid-preview-wrap{width:214.773px;height:300px;flex:0 0 auto;perspective:1000px;cursor:pointer}
+@media(hover:hover) and (pointer:fine){.appid-preview-wrap:hover .card:not(.flip){transform:translateY(-8px) scale(1.015);filter:brightness(1.035);box-shadow:0 22px 42px rgba(0,0,0,.34)}}
+.appid-preview-wrap .card{height:100%;width:100%}
+.appid-preview-footer{display:flex;justify-content:center;gap:9px;padding:13px 18px;border-top:1px solid #343a42}
+.appid-preview-footer button{min-width:130px}
+@media(max-width:600px){.appid-preview-panel{height:94vh}.appid-preview-wrap{width:185.455px;height:260px}.appid-preview-stage{padding:14px}}
+@media print{#print-settings{display:none!important}#appid-generator{display:none!important}#appid-preview{display:none!important}}
+
+/* V73 Back Design Editor: customization variables. Defaults intentionally match V72.1. */
+:root{
+  --back-title-color:#f3f5f7;
+  --back-section-color:#a3adb8;
+  --back-content-color:#e3e7eb;
+  --back-app-id-color:#a2acb6;
+  --back-inner-frame-color:#59636e;
+  --back-frame-color:#7d8791;
+  --back-line-color:#68727d;
+  --back-matrix-color:#000000;
+  --back-bg-image:url('/gamebinder-starfield-neutral.jpg');
+  --back-bg-brightness:100%;
+  --back-bg-saturation:100%;
+}
+.back{background-image:var(--back-bg-image);color:#edf1f5;border-color:var(--back-frame-color)}
+.back-header,.back-header h2{color:var(--back-title-color)}
+.meta{color:var(--back-section-color)}
+.value,.desc,.optional-value{color:var(--back-content-color)}
+.year,.id,.back-footer{color:var(--back-section-color)}
+.app-id-header{color:var(--back-app-id-color)}
+.year:before,.year:after{background:var(--back-line-color)}.detail-cell+.detail-cell,.back-footer .print-bottom{background:transparent;border-color:var(--back-line-color)}
+.back .detail-cell+.detail-cell{border-left-color:var(--back-line-color)}
+.datamatrix-mark svg{color:var(--back-matrix-color)}
+/* Background-only image adjustments. The same pseudo-element is used by viewport and print,
+   so brightness/saturation never affect text, frames, lines, or the Data Matrix. */
+.back,.print-back{background-image:none!important;overflow:hidden}
+.back::before,.print-back::before{content:"";position:absolute;inset:0;background-image:var(--back-bg-image);background-size:cover;background-position:center;background-repeat:no-repeat;filter:brightness(var(--back-bg-brightness)) saturate(var(--back-bg-saturation)) hue-rotate(var(--back-bg-hue));z-index:0;pointer-events:none}
+.back::after{content:"";position:absolute;inset:4px;border:1px solid var(--back-inner-frame-color);box-sizing:border-box;z-index:2;pointer-events:none}
+.print-back::after{content:"";position:absolute;inset:1.058mm;border:0.265mm solid var(--back-inner-frame-color);box-sizing:border-box;z-index:2;pointer-events:none}
+.back > *,.print-back > *{position:relative;z-index:1}
+.bd-preview-card .back::before{z-index:0}
+
+/* Back Design editor */
+#back-design-settings{position:fixed;inset:0;background:rgba(0,0,0,.72);display:none;align-items:center;justify-content:center;z-index:10000}
+#back-design-settings.open{display:flex}
+.back-design-card{width:760px;max-width:calc(100vw - 32px);max-height:calc(100vh - 32px);overflow:auto;background:#20242b;border:1px solid #59636e;box-shadow:0 18px 60px rgba(0,0,0,.55);padding:22px;color:#edf1f5}
+.back-design-layout{display:grid;grid-template-columns:minmax(0,1fr) 230px;gap:24px}
+.back-design-card h3{margin:0 0 6px;text-align:left;font-size:18px}
+.back-design-card .bd-help{margin:0 0 18px;color:#aab3bd;font-size:11px;line-height:1.45}
+.bd-group{border-top:1px solid #303640;padding-top:14px;margin-top:14px}
+.bd-group-title{font-size:10px;font-weight:800;letter-spacing:.14em;color:#a3adb8;margin-bottom:11px}
+.bd-row{display:flex;align-items:center;justify-content:space-between;gap:16px;margin:9px 0}
+.bd-row label{font-size:11px;color:#dfe4e9}
+.bd-slider-row{display:grid;grid-template-columns:1fr auto;gap:12px;align-items:center;margin:11px 0}
+.bd-slider-row label{font-size:11px;color:#dfe4e9}
+.bd-slider-control{grid-column:1 / -1;display:grid;grid-template-columns:auto minmax(120px,1fr) auto;align-items:center;gap:9px;color:#aab3bd;font-size:10px}
+.bd-slider-control input[type=range]{width:100%;accent-color:var(--blue);cursor:pointer}
+.bd-slider-value{min-width:42px;text-align:right;font-variant-numeric:tabular-nums;color:#edf1f5}
+.bd-color{width:44px;height:30px;padding:2px;border:1px solid #59636e;background:#171b20;cursor:pointer}
+.bd-bg-preview{height:90px;border:1px solid #59636e;background-size:cover;background-position:center;margin-bottom:10px}
+.bd-file-name{font-size:10px;color:#aab3bd;word-break:break-all;min-height:15px;margin-bottom:8px}
+.bd-preview-wrap{display:flex;align-items:center;justify-content:center;min-height:310px;background:#171b20;border:1px solid #303640;padding:18px}
+.bd-preview-card{width:160px;height:224px;transform:none!important;cursor:default!important;box-shadow:0 12px 30px rgba(0,0,0,.45)!important}
+.bd-preview-card .face{position:absolute!important;inset:0!important;transform:none!important;display:flex!important}
+.bd-preview-card .back{transform:none!important}
+.bd-preview-card .back-header{padding:10px 10px 6px}
+.bd-preview-card .back-header h2{font-size:13px}
+.bd-preview-card .year{font-size:6px;margin-top:5px;gap:4px}
+.bd-preview-card .app-id-header{font-size:5px}
+.bd-preview-card .back-body{padding:2px 10px 6px}
+.bd-preview-card .meta{font-size:5px;margin-top:3px}
+.bd-preview-card .value{font-size:6.5px}
+.bd-preview-card .about-block{margin-top:7px}
+.bd-preview-card .desc{font-size:5.7px;margin-top:3px;line-height:1.25}
+.bd-preview-card .optional-grid{margin-top:6px}
+.bd-preview-card .optional-value{font-size:5.5px;margin-top:3px}
+.bd-preview-card .back-footer{padding:3px 10px 5px}
+.bd-preview-card .back-footer .print-bottom{padding-top:3px}
+.bd-preview-card .datamatrix-mark{width:13px;height:13px}
+.bd-actions{display:flex;justify-content:flex-end;gap:9px;margin-top:20px;border-top:1px solid #303640;padding-top:16px}
+.bd-actions button{padding:8px 14px}
+@media(max-width:700px){.back-design-layout{grid-template-columns:1fr}.bd-preview-wrap{min-height:270px}}
+@media print{#back-design-settings{display:none!important}.print-back{background-image:var(--back-bg-image)!important;border-color:#7d8791!important}.print-back .back-header,.print-back .back-header h2{color:var(--back-title-color)!important}.print-back .print-meta,.print-back .meta{color:var(--back-section-color)!important}.print-back .print-value,.print-back .print-desc,.print-back .optional-value{color:var(--back-content-color)!important}.print-back .print-year{color:var(--back-section-color)!important}.print-back .print-app-id{color:var(--back-app-id-color)!important}.print-back .print-year:before,.print-back .print-year:after,.print-back .detail-cell+.detail-cell,.print-back .print-bottom{border-color:var(--back-line-color)!important;background-color:transparent!important}.print-back .detail-cell+.detail-cell{border-left-color:var(--back-line-color)!important}.print-back .print-bottom{border-top-color:var(--back-line-color)!important}.print-back .datamatrix-mark svg{color:var(--back-matrix-color)!important}}
+/* V75: viewport/print reverse-card synchronization. The print face reuses the same semantic classes as .back; only physical sizing/placement is overridden. */
+@media print{
+  .print-back.back{
+    background-image:var(--back-bg-image)!important;
+    border-color:#7d8791!important;
+    box-shadow:inset 0 0 0 .794mm #1b2026,inset 0 0 0 1.058mm var(--back-inner-frame-color)!important;
+  }
+  .print-back.back .back-header,.print-back.back .back-header h2{color:var(--back-title-color)!important}
+  .print-back.back .meta{color:var(--back-section-color)!important}
+  .print-back.back .value,.print-back.back .desc,.print-back.back .optional-value{color:var(--back-content-color)!important}
+  .print-back.back .app-id-header{color:var(--back-app-id-color)!important}
+  .print-back.back .year{color:var(--back-section-color)!important}
+  .print-back.back .year:before,.print-back.back .year:after{background:var(--back-line-color)!important}
+  .print-back.back .detail-cell+.detail-cell{border-left-color:var(--back-line-color)!important}
+  .print-back.back .back-footer .print-bottom{border-top-color:var(--back-line-color)!important}
+  .print-back.back .datamatrix-mark svg{color:var(--back-matrix-color)!important}
+}
+
+</style>
+
+<style id="gb-v106-pdf-viewport-sync">
+/* V106: universal PDF typography sync. Viewport remains the master reference.
+   Scale factor is based on the existing 300px viewport card height mapping to
+   the physical 88mm print card. No title/game-specific selectors are used. */
+@media print {
+  .print-back h2 { font-size:5.28mm!important; }
+  .print-back h2.title-medium { font-size:4.69mm!important; }
+  .print-back h2.title-long { font-size:4.11mm!important; }
+
+  .print-back .print-year,
+  .print-back .year { font-size:2.35mm!important; }
+  .print-back .print-app-id,
+  .print-back .app-id-header,
+  .print-back .id { font-size:2.05mm!important; }
+
+  .print-back .print-meta,
+  .print-back .meta { font-size:2.05mm!important; }
+  .print-back .print-value,
+  .print-back .value { font-size:2.93mm!important; }
+
+  /* ABOUT and FEATURES are universal classes. */
+  .print-back .print-desc,
+  .print-back .desc {
+    font-size:2.55mm!important;
+    line-height:1.28!important;
+  }
+  .print-back .optional-value {
+    font-size:2.38mm!important;
+    line-height:1.22!important;
+  }
+}
+</style>
+</head>
+<body>
+<header>
+<div class="top"><div class="logo">Game<span>Binder</span></div><div class="stats"><b id="count">—</b> games · <span id="pages">—</span> print page(s)</div></div>
+<div class="controls">
+<input id="search" placeholder="Search your Steam library…" disabled>
+<select id="sort" disabled><option value="title">Title A–Z</option><option value="playtime">Most played</option></select>
+<button id="sync">Sync My Lib</button>
+<button id="print" disabled>Export / Print PDF</button>
+<button id="back-design">Back Design</button>
+<button id="excluded" type="button">Excluded (0)</button>
+<button id="generate-appid" type="button">Create by App ID</button>
+</div>
+</header>
+<main>
+<div class="status" id="status"><div class="statusbar"><div class="meter"><i id="progressBar"></i></div><div class="status-counts" id="statusCounts">0 found · 0 synced · 0 pending</div><div id="statusMessage">Ready. Click “Sync My Lib” to load your real library.</div></div></div>
+<div class="grid" id="grid"></div>
+<div class="empty" id="empty">No games match your search.</div>
+<div class="print-pages" id="printPages"></div>
+<div id="appid-generator" aria-hidden="true" style="display:none">
+  <div class="appid-generator-card">
+    <h3>Create Card by App ID</h3>
+    <p>Paste a Steam App ID or Steam game link to preview and print one temporary card.</p>
+    <label for="appid-generator-input">STEAM APP ID OR LINK</label>
+    <input id="appid-generator-input" inputmode="text" autocomplete="off" placeholder="e.g. 1245620 or Steam link">
+    <div id="appid-generator-status"></div>
+    <div class="appid-generator-actions"><button id="appid-generator-cancel" type="button">Cancel</button><button id="appid-generator-create" class="primary" type="button">Create Card</button></div>
+  </div>
+</div>
+<div id="appid-preview" aria-hidden="true" style="display:none">
+  <div class="appid-preview-panel">
+    <div class="appid-preview-header">
+      <div><h3>Temporary Card Preview</h3><div class="appid-preview-subtitle" id="appid-preview-subtitle">Not added to your library</div></div>
+      <div class="appid-preview-actions"><button id="appid-preview-back-design" type="button">Back Design</button><button id="appid-preview-close" type="button">Close</button></div>
+    </div>
+    <div class="appid-preview-stage" id="appid-preview-stage"></div>
+    <div class="appid-preview-footer"><button id="appid-preview-print" class="primary" type="button">Print this card</button></div>
+  </div>
+</div>
+<div id="print-settings" aria-hidden="true" style="display:none"><div class="print-settings-card">
+<h3>Print Settings</h3>
+<p>Choose the physical paper size. Cards remain 63 × 88 mm.</p>
+<div class="print-setting-row"><label for="print-paper-size">PAPER SIZE</label><select id="print-paper-size"><option value="A4">A4 · 210 × 297 mm</option><option value="LETTER">Letter · 216 × 279 mm</option></select></div>
+<div class="print-settings-actions"><button id="print-cancel">Cancel</button><button id="print-continue" class="primary">Continue to Print</button></div>
+</div></div>
+<div id="back-design-settings" aria-hidden="true" style="display:none">
+  <div class="back-design-card">
+    <h3>Back Card Design</h3>
+    <p class="bd-help">Customize the reverse side without changing its size, layout, typography, or print geometry. The outer cut guide stays fixed; Inner Frame is the configurable design frame. Changes preview instantly.</p>
+    <div class="back-design-layout">
+      <div>
+        <div class="bd-group" style="border-top:0;padding-top:0;margin-top:0">
+          <div class="bd-group-title">COLORS</div>
+          <div class="bd-row"><label>Game Title</label><input class="bd-color" id="bd-game-title" type="color"></div>
+          <div class="bd-row"><label>Section Titles</label><input class="bd-color" id="bd-section-title" type="color"></div>
+          <div class="bd-row"><label>Field Content</label><input class="bd-color" id="bd-content" type="color"></div>
+          <div class="bd-row"><label>App ID</label><input class="bd-color" id="bd-app-id" type="color"></div>
+          <div class="bd-row"><label>Inner Frame</label><input class="bd-color" id="bd-inner-frame" type="color"></div>
+          <div class="bd-row"><label>Dividers / Lines</label><input class="bd-color" id="bd-line" type="color"></div>
+        </div>
+        <div class="bd-group">
+          <div class="bd-group-title">BACKGROUND</div>
+          <div class="bd-bg-preview" id="bd-bg-preview"></div>
+          <div class="bd-file-name" id="bd-bg-name">Default GameBinder background</div>
+          <input id="bd-bg-file" type="file" accept="image/*" style="display:none">
+          <button id="bd-bg-choose">Choose image…</button>
+          <div style="margin-top:8px;font-size:10px;color:#aab3bd">Any image is accepted. GameBinder automatically crops it to 1061 × 1483 px while preserving its proportions.</div>
+          <div id="bd-bg-status" style="margin-top:6px;font-size:10px;color:#aab3bd;line-height:1.35"></div>
+          <div class="bd-slider-row">
+            <label for="bd-bg-brightness">Brightness</label>
+            <span class="bd-slider-value" id="bd-bg-brightness-value">100%</span>
+            <div class="bd-slider-control"><span>Darker</span><input id="bd-bg-brightness" type="range" min="0" max="200" step="1" value="100"><span>Brighter</span></div>
+          </div>
+          <div class="bd-slider-row">
+            <label for="bd-bg-saturation">Saturation</label>
+            <span class="bd-slider-value" id="bd-bg-saturation-value">100%</span>
+            <div class="bd-slider-control"><span>Grayscale</span><input id="bd-bg-saturation" type="range" min="0" max="200" step="1" value="100"><span>Full</span></div>
+          </div>
+          <div class="bd-slider-row">
+            <label for="bd-bg-hue">Hue</label>
+            <span class="bd-slider-value" id="bd-bg-hue-value">0°</span>
+            <div class="bd-slider-control"><span>-180°</span><input id="bd-bg-hue" type="range" min="-180" max="180" step="1" value="0"><span>+180°</span></div>
+          </div>
+        </div>
+      </div>
+      <div>
+        <div class="bd-group-title">LIVE PREVIEW</div>
+        <div class="bd-preview-wrap">
+          <div class="card bd-preview-card">
+            <div class="face back">
+              <div class="back-header"><h2>GameBinder Preview</h2><div class="year"><span>Release date · 2026</span></div><div class="app-id-header">APP ID · 123456</div></div>
+              <div class="back-body"><div class="meta-grid"><div class="detail-cell"><div class="meta">DEVELOPER</div><div class="value">Valve</div></div><div class="detail-cell"><div class="meta">PUBLISHER</div><div class="value">GameBinder</div></div></div><div class="content-group"><div class="about-block"><div class="meta">ABOUT</div><div class="desc">This is a live preview of the current reverse-card design.</div></div><div class="optional-grid"><div class="optional-cell"><div class="meta">FEATURES</div><div class="optional-value">Singleplayer · Online · Controller</div></div></div></div></div>
+              <div class="back-footer"><div class="print-bottom"><div class="datamatrix-mark" id="bd-preview-matrix"></div></div></div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+    <div class="bd-actions"><button id="bd-reset">Reset to Default</button><button id="bd-cancel">Cancel</button><button id="bd-apply" class="primary">Save &amp; Apply</button></div>
+  </div>
+</div>
+<div id="gb-context-menu" style="display:none;position:fixed;z-index:10001;min-width:190px;background:#20242b;border:1px solid #59636e;box-shadow:0 12px 30px rgba(0,0,0,.45);padding:5px;border-radius:8px">
+  <button id="gb-context-action" type="button" style="display:block;width:100%;text-align:left;background:transparent;border:0;border-radius:5px;padding:9px 11px;font-size:12px">Exclude from GameBinder</button>
+</div>
+</main>
+<script src="/datamatrix.min.js"></script>
+<script>
+let games=[];
+const grid=document.querySelector("#grid"),search=document.querySelector("#search"),sort=document.querySelector("#sort");
+const statusEl=document.querySelector("#status"),count=document.querySelector("#count"),pages=document.querySelector("#pages");
+const statusCounts=document.querySelector("#statusCounts"),statusMessage=document.querySelector("#statusMessage"),progressBar=document.querySelector("#progressBar");
+const empty=document.querySelector("#empty"),sync=document.querySelector("#sync"),print=document.querySelector("#print"),printPages=document.querySelector("#printPages"),excludedButton=document.querySelector("#excluded"),contextMenu=document.querySelector("#gb-context-menu"),contextAction=document.querySelector("#gb-context-action");
+const appIdGenerator=document.querySelector("#appid-generator"),appIdGeneratorInput=document.querySelector("#appid-generator-input"),appIdGeneratorStatus=document.querySelector("#appid-generator-status"),generateAppIdButton=document.querySelector("#generate-appid"),appIdGeneratorCancel=document.querySelector("#appid-generator-cancel"),appIdGeneratorCreate=document.querySelector("#appid-generator-create");
+const appIdPreview=document.querySelector("#appid-preview"),appIdPreviewStage=document.querySelector("#appid-preview-stage"),appIdPreviewSubtitle=document.querySelector("#appid-preview-subtitle"),appIdPreviewClose=document.querySelector("#appid-preview-close"),appIdPreviewPrint=document.querySelector("#appid-preview-print"),appIdPreviewBackDesign=document.querySelector("#appid-preview-back-design");
+const printSettings=document.querySelector("#print-settings"),printPaperSize=document.querySelector("#print-paper-size"),printCancel=document.querySelector("#print-cancel"),printContinue=document.querySelector("#print-continue");
+const backDesign=document.querySelector("#back-design"),backDesignSettings=document.querySelector("#back-design-settings"),bdBgFile=document.querySelector("#bd-bg-file"),bdBgChoose=document.querySelector("#bd-bg-choose"),bdBgPreview=document.querySelector("#bd-bg-preview"),bdBgName=document.querySelector("#bd-bg-name"),bdBgStatus=document.querySelector("#bd-bg-status"),bdPreviewMatrix=document.querySelector("#bd-preview-matrix"),bdBgBrightness=document.querySelector("#bd-bg-brightness"),bdBgSaturation=document.querySelector("#bd-bg-saturation"),bdBgHue=document.querySelector("#bd-bg-hue"),bdBgBrightnessValue=document.querySelector("#bd-bg-brightness-value"),bdBgSaturationValue=document.querySelector("#bd-bg-saturation-value"),bdBgHueValue=document.querySelector("#bd-bg-hue-value");
+const bdInputs={gameTitle:document.querySelector("#bd-game-title"),sectionTitle:document.querySelector("#bd-section-title"),content:document.querySelector("#bd-content"),appId:document.querySelector("#bd-app-id"),innerFrame:document.querySelector("#bd-inner-frame"),line:document.querySelector("#bd-line")};
+let selectedPrintPaper="A4";
+let pendingPrintGames=null;
+let temporaryCardGame=null;
+let showExcluded=false;
+let excludedAppIds=new Set();
+try{
+  const saved=JSON.parse(localStorage.getItem("gamebinder.excludedAppIds")||"[]");
+  if(Array.isArray(saved)) excludedAppIds=new Set(saved.map(String));
+}catch(_){}
+function saveExcluded(){ localStorage.setItem("gamebinder.excludedAppIds",JSON.stringify([...excludedAppIds])); }
+function updateExcludedButton(){ if(excludedButton) excludedButton.textContent=`Excluded (${excludedAppIds.size})`; }
+function closeContextMenu(){ if(contextMenu){ contextMenu.style.display="none"; contextMenu.removeAttribute("data-appid"); } }
+function excludeGame(appid){ excludedAppIds.add(String(appid)); saveExcluded(); showExcluded=false; closeContextMenu(); render(); }
+function restoreGame(appid){ excludedAppIds.delete(String(appid)); saveExcluded(); closeContextMenu(); render(); }
+updateExcludedButton();
+printSettings.classList.remove("open"); printSettings.style.display="none"; printSettings.setAttribute("aria-hidden","true");
+let detailPromises=[];
+const detailsByAppId=new Map();
+const artworkPromises = new Map();
+const gameByAppId = new Map();
+const dataMatrixCache = new Map();
+const flippedCards = new Set();
+let artworkQueue = [];
+let artworkWorkersRunning = 0;
+const ARTWORK_CONCURRENCY = 6;
+let featureFitQueue = new Set();
+let featureFitRaf = 0;
+let syncStatusRaf = 0;
+let scrollResetRaf = 0;
+
+function rebuildGameIndex(){
+  gameByAppId.clear();
+  for(const g of games) gameByAppId.set(String(g.app_id), g);
+}
+function getGame(appid){ return gameByAppId.get(String(appid)); }
+
+
+function dataMatrixSvg(appid){
+  const matrixColor=(getComputedStyle(document.documentElement).getPropertyValue("--back-matrix-color").trim()||"#000000").toLowerCase();
+  const key=`${appid}|${matrixColor}`;
+  if(dataMatrixCache.has(key)) return dataMatrixCache.get(key);
+  try{
+    if(typeof DATAMatrix!=="function") return "";
+    const node=DATAMatrix({msg:`https://s.team/a/${appid}`,dim:256,pad:2,pal:[matrixColor,"#ffffff"],vrb:0});
+    const svg=node?.outerHTML || "";
+    dataMatrixCache.set(key,svg);
+    return svg;
+  }catch(_){ return ""; }
+}
+
+function updateSyncStatus(message){
+  const total=games.length;
+  const synced=games.filter(g=>g.sync_state === "synced").length;
+  const pending=Math.max(0,total-synced);
+  const failed=games.filter(g=>g.sync_state === "failed").length;
+  const pct=total ? Math.min(100,Math.round((synced/total)*100)) : 0;
+  statusCounts.textContent=`${total} found · ${synced} synced · ${pending} pending${failed ? ` · ${failed} unavailable` : ""}`;
+  progressBar.style.width=`${pct}%`;
+  statusMessage.textContent=message || (pending ? "Sync needed" : "Everything is synchronized");
+}
+function refreshGameSyncState(g){
+  const artworkReady=Boolean(g.artwork_resolved || g.artwork_cached);
+  const detailsReady=detailsByAppId.has(String(g.app_id)) || Boolean(g.details_cached);
+  if(g.artwork_failed) g.sync_state="failed";
+  else if(artworkReady && detailsReady) g.sync_state="synced";
+  else g.sync_state="pending";
+}
+function refreshAllSyncStates(){ games.forEach(refreshGameSyncState); updateSyncStatus(); }
+function scheduleSyncStatus(){
+  if(syncStatusRaf) return;
+  syncStatusRaf=requestAnimationFrame(()=>{ syncStatusRaf=0; updateSyncStatus(); });
+}
+async function cacheArtwork(g){
+  if(!g.artwork_url || g.artwork_cached || g.artwork_url.startsWith("/api/artwork-cache/")) return;
+  try{
+    const r=await fetch("/api/cache-artwork",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({appid:g.app_id,url:g.artwork_url,width:g.artwork_width||0,height:g.artwork_height||0,horizontal:Boolean(g.artwork_horizontal)})});
+    if(r.ok){
+      const data=await r.json();
+      if(data.cached){
+        g.artwork_url=data.url || `/api/artwork-cache/${g.app_id}`;
+        g.artwork_cached=true;
+      }
+    }
+  }catch(_){ /* Remote artwork remains usable if disk caching is temporarily unavailable. */ }
+}
+async function hydrateCachedDetails(){
+  const pending=games.filter(g=>g.details_cached && !detailsByAppId.has(String(g.app_id)));
+  if(!pending.length) return;
+  for(let i=0;i<pending.length;i+=100){
+    const chunk=pending.slice(i,i+100);
+    try{
+      const ids=chunk.map(g=>g.app_id).join(",");
+      const r=await fetch(`/api/cache-status?appids=${encodeURIComponent(ids)}`);
+      if(!r.ok) continue;
+      const data=await r.json();
+      Object.entries(data.details||{}).forEach(([id,d])=>{
+        detailsByAppId.set(id,d);
+        const game=getGame(id);
+        if(game && hasDetailValue(d?.title)) game.title=d.title;
+      });
+      chunk.forEach(g=>refreshGameSyncState(g));
+    }catch(_){}
+  }
+  refreshAllSyncStates();
+}
+async function loadCachedLibrary(){
+  try{
+    const r=await fetch("/api/cache/library");
+    if(!r.ok) return false;
+    const data=await r.json();
+    if(!Array.isArray(data.games) || !data.games.length) return false;
+    games=data.games.map(g=>({...g, artwork_failed:Boolean(g.artwork_failed), artwork_resolved:Boolean(g.artwork_resolved || g.artwork_cached), sync_state:"pending"}));
+    rebuildGameIndex();
+    games.forEach(refreshGameSyncState);
+    search.disabled=false; sort.disabled=false;
+    render();
+    refreshAllSyncStates();
+    await hydrateCachedDetails();
+    await waitForArtworkResolution();
+    refreshAllSyncStates();
+    print.disabled=getPrintableGames().length===0;
+    statusMessage.textContent="Loaded from local cache · click Sync Steam to check for changes";
+    return true;
+  }catch(_){ return false; }
+}
+
+function titleClass(title){
+  const n=String(title||"").length;
+  if(n>34) return "title-long";
+  if(n>24) return "title-medium";
+  return "";
+}
+function escapeHtml(s){return String(s).replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#039;"}[c]));}
+function uniqueArtworkCandidates(g){
+  const list=[];
+  // Steam currently serves these two Battlefield 6 library capsules through
+  // content-hashed asset paths. Keep them as explicit known-good candidates
+  // while the universal resolver handles the rest of the library.
+  const knownSteamArtwork={
+    "2807960":"https://shared.fastly.steamstatic.com/store_item_assets/steam/apps/2807960/289b1c193f9730a0d4ea4dbf912219e46cd1a8a3/library_capsule_2x.jpg",
+    "3081410":"https://shared.fastly.steamstatic.com/store_item_assets/steam/apps/3081410/52f9c64d00833656891243f0475d51c9a27f1013/library_capsule_2x.jpg"
+  };
+  const add=v=>{ if(typeof v!=="string" || !v.trim()) return; if(!list.includes(v)) list.push(v); };
+  add(knownSteamArtwork[String(g.app_id)]);
+  if(Array.isArray(g.artwork_candidates)) g.artwork_candidates.forEach(add);
+  add(g.artwork_url);
+  add(g.artwork_fallback_url);
+  return list;
+}
+
+function artworkIsGoodPortrait(img){
+  const w=img.naturalWidth||0, h=img.naturalHeight||0;
+  return w>=500 && h>=750 && (w/h)<=1.15;
+}
+
+function artworkIsHorizontal(img){
+  const w=img.naturalWidth||0, h=img.naturalHeight||0;
+  return w>=400 && h>=180 && (w/h)>=1.25;
+}
+
+function artworkIsUsableFallback(img){
+  const w=img.naturalWidth||0, h=img.naturalHeight||0;
+  return w>=400 && h>=180;
+}
+
+function artworkPlaceholder(g){
+  return `<div class="art-placeholder"><span>${escapeHtml(g.title)}</span></div>`;
+}
+
+function setResolvedArtwork(g,img,result){
+  g.artwork_url=img.currentSrc || img.src;
+  g.artwork_resolved=true;
+  g.artwork_width=result?.w || img.naturalWidth || 0;
+  g.artwork_height=result?.h || img.naturalHeight || 0;
+  g.artwork_horizontal=(g.artwork_width > 0 && g.artwork_height > 0 && (g.artwork_width / g.artwork_height) > 1.25);
+}
+
+function applyArtworkOrientation(g,img){
+  if(!img || !g.artwork_resolved) return;
+  const w=g.artwork_width || img.naturalWidth || 0;
+  const h=g.artwork_height || img.naturalHeight || 0;
+  const horizontal=w>0 && h>0 && (w/h)>1.25;
+  g.artwork_horizontal=horizontal;
+  img.classList.toggle("art-horizontal",horizontal);
+  if(horizontal){
+    const frame=img.closest(".front,.print-front");
+    if(frame){
+      const fw=frame.clientWidth || 1;
+      const fh=frame.clientHeight || 1;
+      img.style.setProperty("--horizontal-art-scale", String(fh/fw));
+    }
+  }else{
+    img.style.removeProperty("--horizontal-art-scale");
+  }
+}
+
+function loadImageCandidate(img,url){
+  return new Promise(resolve=>{
+    if(!img) return resolve({ok:false,portrait:false,horizontal:false,usable:false,w:0,h:0,url});
+    const done=ok=>resolve(ok
+      ? {ok:true,portrait:artworkIsGoodPortrait(img),horizontal:artworkIsHorizontal(img),usable:artworkIsUsableFallback(img),w:img.naturalWidth||0,h:img.naturalHeight||0,url}
+      : {ok:false,portrait:false,horizontal:false,usable:false,w:0,h:0,url});
+    img.onload=()=>done(true);
+    img.onerror=()=>done(false);
+    img.src=url;
+  });
+}
+
+async function resolveArtworkForGame(g, img){
+  if(g.artwork_resolved) return true;
+  const tried=new Set();
+  let portraitBest=null;
+  let horizontalBest=null;
+  let fallback=null;
+
+  const considerResult=result=>{
+    if(!result || !result.ok) return;
+    if(result.portrait && !portraitBest) portraitBest=result;
+    if(result.horizontal && !horizontalBest) horizontalBest=result;
+    if(result.usable && !fallback) fallback=result;
+  };
+
+  const commit=result=>{
+    if(!result) return false;
+    if(img.src !== result.url) img.src=result.url;
+    setResolvedArtwork(g,img,result);
+    applyArtworkOrientation(g,img);
+    return true;
+  };
+
+  // Fast resolver: stop as soon as we have the type of artwork we are looking
+  // for. Do NOT scan every Steam candidate sequentially; doing that for a
+  // 356-game library makes every card appear dead while dozens of URLs time out.
+  const findFirst=async (candidates, wanted)=>{
+    for(const url of candidates){
+      if(tried.has(url)) continue;
+      tried.add(url);
+      const result=await loadImageCandidate(img,url);
+      if(!result.ok) continue;
+      considerResult(result);
+      if(wanted==='horizontal' && result.horizontal) return result;
+      if(wanted==='portrait' && result.portrait) return result;
+    }
+    return null;
+  };
+
+  let backendCandidates=[];
+  let backendPrefersHorizontal=false;
+
+  // Get Steam's current asset metadata first. This lets the backend tell us
+  // when a generated portrait.png is really a wrapper around horizontal art.
+  try{
+    const r=await fetch(`/api/artwork/${g.app_id}`);
+    if(r.ok){
+      const data=await r.json();
+      backendPrefersHorizontal=Boolean(data.prefer_horizontal);
+      backendCandidates=Array.isArray(data.candidates)?data.candidates:[];
+    }
+  }catch(_){}
+
+  const localCandidates=uniqueArtworkCandidates(g);
+
+  if(backendPrefersHorizontal){
+    // When Steam identifies a generated portrait wrapper, prefer the first
+    // genuinely horizontal image available. That image is the one that will
+    // be rotated inside the fixed 4.8 card.
+    let chosen=await findFirst(backendCandidates,'horizontal');
+    if(!chosen) chosen=await findFirst(localCandidates,'horizontal');
+    if(chosen) return commit(chosen);
+
+    // Safe fallback if the horizontal asset is unavailable.
+    let portrait=await findFirst(backendCandidates,'portrait');
+    if(!portrait) portrait=await findFirst(localCandidates,'portrait');
+    if(portrait) return commit(portrait);
+  }else{
+    // Normal games keep the proven 4.8 behavior: prefer a true vertical
+    // library capsule. Only if no portrait exists do we accept horizontal art.
+    let portrait=await findFirst(localCandidates,'portrait');
+    if(!portrait) portrait=await findFirst(backendCandidates,'portrait');
+    if(portrait) return commit(portrait);
+
+    let horizontal=await findFirst(localCandidates,'horizontal');
+    if(!horizontal) horizontal=await findFirst(backendCandidates,'horizontal');
+    if(horizontal) return commit(horizontal);
+  }
+
+  // Last resort: a sufficiently large non-icon image. It remains fully
+  // constrained by the existing 4.8 card geometry.
+  if(fallback) return commit(fallback);
+  return false;
+}
+function getVisibleGames(){
+  const q=search.value.toLowerCase();
+  return games.filter(g=>!g.artwork_failed && !excludedAppIds.has(String(g.app_id)) && g.title.toLowerCase().includes(q));
+}
+function getPrintableGames(){
+  const q=search.value.toLowerCase();
+  return games.filter(g=>
+    !excludedAppIds.has(String(g.app_id)) &&
+    !g.artwork_failed &&
+    g.sync_state==="synced" &&
+    Boolean(g.artwork_resolved || g.artwork_cached) &&
+    Boolean(g.artwork_url) &&
+    g.title.toLowerCase().includes(q)
+  );
+}
+function enqueueArtworkTask(task){
+  return new Promise((resolve,reject)=>{
+    artworkQueue.push({task,resolve,reject});
+    pumpArtworkQueue();
+  });
+}
+
+function pumpArtworkQueue(){
+  while(artworkWorkersRunning < ARTWORK_CONCURRENCY && artworkQueue.length){
+    const job=artworkQueue.shift();
+    artworkWorkersRunning++;
+    Promise.resolve().then(job.task).then(job.resolve,job.reject).finally(()=>{
+      artworkWorkersRunning--;
+      pumpArtworkQueue();
+    });
+  }
+}
+
+function startArtworkResolution(g, img, frame){
+  const key=String(g.app_id);
+  if(artworkPromises.has(key)) return artworkPromises.get(key);
+  const promise=enqueueArtworkTask(async()=>{
+    const ok=await resolveArtworkForGame(g,img);
+    if(!ok){
+      g.artwork_failed=true;
+      g.artwork_status="failed";
+      g.sync_state="failed";
+      const wrap=img && img.closest(".wrap");
+      if(wrap) wrap.remove();
+      const visible=getVisibleGames();
+      count.textContent=visible.length;
+      pages.textContent=Math.max(1,Math.ceil(visible.length/9));
+      empty.style.display=visible.length?"none":"block";
+      scheduleSyncStatus();
+      return false;
+    }
+    g.artwork_status="resolved";
+    img.style.display="block";
+    await cacheArtwork(g);
+    refreshGameSyncState(g);
+    scheduleSyncStatus();
+    return true;
+  });
+  artworkPromises.set(key,promise);
+  promise.then(()=>artworkPromises.delete(key),()=>artworkPromises.delete(key));
+  return promise;
+}
+async function waitForArtworkResolution(){
+  while(artworkPromises.size){
+    await Promise.all([...artworkPromises.values()]);
+  }
+}
+async function loadDetails(appid){
+  if(detailsByAppId.has(String(appid))) return detailsByAppId.get(String(appid));
+  try{
+    const r=await fetch(`/api/details/${appid}`);
+    if(!r.ok) throw new Error(`HTTP ${r.status}`);
+    const d=await r.json();
+    detailsByAppId.set(String(appid),d);
+    const game=getGame(appid); if(game){game.details_cached=true; refreshGameSyncState(game);}
+    applyDetails(appid,d);
+    return d;
+  }catch(_){
+    const d={app_id:Number(appid),year:"",release_date:"",developer:"",publisher:"",description:""};
+    detailsByAppId.set(String(appid),d);
+    const game=getGame(appid); if(game){game.details_cached=true; refreshGameSyncState(game);}
+    applyDetails(appid,d);
+    return d;
+  }
+}
+
+function hasDetailValue(value){
+  const v=String(value??"").trim();
+  if(!v || v==="—" || v==="-" ) return false;
+  if(/^no\s+(short\s+)?description\s+available\.?$/i.test(v)) return false;
+  if(/^loading(?:\s+short\s+description)?…?$/i.test(v)) return false;
+  return true;
+}
+function applyDetails(appid,d){
+  if(hasDetailValue(d?.title)){
+    const game=getGame(appid);
+    if(game) game.title=d.title;
+    const titleNodes=document.querySelectorAll(`.wrap[data-id="${appid}"] .back-header h2, .print-back[data-appid="${appid}"] .back-header h2`);
+    titleNodes.forEach(node=>{ node.textContent=d.title; node.className=titleClass(d.title); });
+  }
+  const y=document.querySelector(`#year-${appid}`);
+  const dev=document.querySelector(`#dev-${appid}`);
+  const pub=document.querySelector(`#pub-${appid}`);
+  const desc=document.querySelector(`#desc-${appid}`);
+  const yearBlock=y?.closest(".detail-block");
+  const devBlock=dev?.closest(".detail-block");
+  const pubBlock=pub?.closest(".detail-block");
+  const descBlock=desc?.closest(".detail-block");
+  const release=hasDetailValue(d.release_date);
+  const developer=hasDetailValue(d.developer);
+  const publisher=hasDetailValue(d.publisher);
+  const description=hasDetailValue(d.description);
+  if(y){ y.textContent=release ? `Release date · ${d.release_date}` : ""; if(yearBlock) yearBlock.style.display=release?"":"none"; }
+  if(dev){ dev.textContent=developer ? d.developer : ""; if(devBlock) devBlock.style.display=developer?"":"none"; }
+  if(pub){ pub.textContent=publisher ? d.publisher : ""; if(pubBlock) pubBlock.style.display=publisher?"":"none"; }
+  if(desc){ desc.textContent=description ? d.description : ""; if(descBlock) descBlock.style.display=description?"":"none"; }
+  const features=document.querySelector(`#features-${appid}`);
+  const featuresBlock=document.querySelector(`#features-block-${appid}`);
+  const featureList=Array.isArray(d?.features)?d.features.filter(hasDetailValue):[];
+  if(features){ features.textContent=featureList.join(" · "); if(featuresBlock) featuresBlock.style.display=featureList.length?"":"none"; }
+  if(printPages.childElementCount) updatePrintDetails(appid,d);
+  queueFitFeatures(appid);
+}
+
+function queueFitFeatures(appid){
+  featureFitQueue.add(String(appid));
+  if(featureFitRaf) return;
+  featureFitRaf=requestAnimationFrame(()=>{
+    featureFitRaf=0;
+    const ids=[...featureFitQueue];
+    featureFitQueue.clear();
+    ids.forEach(fitFeatures);
+  });
+}
+
+let featureMeasureHost = null;
+
+function getFeatureMeasureHost(){
+  if(featureMeasureHost && featureMeasureHost.isConnected) return featureMeasureHost;
+  const host=document.createElement("div");
+  host.className="feature-measure-host content-group";
+  Object.assign(host.style,{
+    position:"absolute", left:"-100000px", top:"0", visibility:"hidden",
+    display:"flex", flexDirection:"column", justifyContent:"flex-start",
+    flex:"0 0 auto", height:"auto", minHeight:"0", maxHeight:"none",
+    overflow:"visible", boxSizing:"border-box", pointerEvents:"none"
+  });
+  document.body.appendChild(host);
+  featureMeasureHost=host;
+  return host;
+}
+
+function measureNaturalContent(el, width, printMode=false){
+  if(!el) return 0;
+  const host=getFeatureMeasureHost();
+  host.className=el.className||"content-group";
+  host.innerHTML=el.innerHTML;
+  Object.assign(host.style,{
+    width:width+"px", height:"auto", minHeight:"0", maxHeight:"none",
+    overflow:"visible", display:"flex", flexDirection:"column",
+    justifyContent:"flex-start", flex:"0 0 auto"
+  });
+  if(printMode){
+    const about=host.querySelector('.about-block');
+    const desc=host.querySelector('.desc');
+    const opt=host.querySelector('.optional-grid');
+    if(about) Object.assign(about.style,{flex:'0 0 auto',minHeight:'0',maxHeight:'none',height:'auto',overflow:'visible'});
+    if(desc) Object.assign(desc.style,{flex:'0 0 auto',minHeight:'0',maxHeight:'none',height:'auto',overflow:'visible',display:'block'});
+    if(opt) Object.assign(opt.style,{flex:'0 0 auto',height:'auto',overflow:'visible'});
+  }
+  return host.getBoundingClientRect().height;
+}
+
+function fitFeatures(appid){
+  const desc=document.querySelector(`#desc-${appid}`);
+  const features=document.querySelector(`#features-block-${appid}`);
+  const group=features?.closest('.content-group');
+  if(!desc || !features || !group) return;
+  if(!document.querySelector(`#features-${appid}`)?.textContent.trim()) { features.style.display='none'; return; }
+
+  features.style.display='';
+  // V67 rule: ABOUT has priority. If the complete natural ABOUT + FEATURES
+  // block does not fit in the available content area, remove FEATURES as a
+  // whole. Never clip or shorten ABOUT to preserve FEATURES.
+  const available=group.clientHeight;
+  const natural=measureNaturalContent(group, group.clientWidth, false);
+  if(natural > available + 1){
+    features.style.display='none';
+  }
+  syncPrintFeatureVisibility(appid);
+}
+
+function syncPrintFeatureVisibility(appid){
+  const screenFeatures=document.querySelector(`#features-block-${appid}`);
+  const printFeatures=document.querySelector(`#print-features-block-${appid}`);
+  if(!screenFeatures || !printFeatures) return;
+  const hidden=getComputedStyle(screenFeatures).display==='none' || screenFeatures.style.display==='none';
+  printFeatures.style.display=hidden?'none':'';
+}
+
+function fitPrintFeatures(appid){
+  // Retained for compatibility with older call paths. V68 intentionally
+  // delegates the decision to the screen card, where the content is fully
+  // measurable before print preparation begins.
+  syncPrintFeatureVisibility(appid);
+}
+
+async function loadDetailsInBatches(list){
+  detailPromises=[];
+  if(!list.length){ refreshAllSyncStates(); return; }
+  const chunks=[];
+  for(let i=0;i<list.length;i+=100) chunks.push(list.slice(i,i+100));
+  const jobs=chunks.map(async chunk=>{
+    try{
+      const ids=chunk.map(g=>g.app_id).join(",");
+      const r=await fetch(`/api/details-batch?appids=${encodeURIComponent(ids)}`);
+      if(!r.ok) throw new Error(`HTTP ${r.status}`);
+      const data=await r.json();
+      const details=data.details || {};
+      chunk.forEach(g=>{
+        const d=details[String(g.app_id)];
+        if(d){
+          if(hasDetailValue(d.title)) g.title=d.title;
+          detailsByAppId.set(String(g.app_id),d);
+          g.details_cached=true; refreshGameSyncState(g);
+          applyDetails(g.app_id,d);
+        }else{
+          const fallback={app_id:Number(g.app_id),title:g.title,release_date:"",developer:"",publisher:"",description:""};
+          detailsByAppId.set(String(g.app_id),fallback);
+          g.details_cached=true; refreshGameSyncState(g);
+          applyDetails(g.app_id,fallback);
+        }
+      });
+    }catch(_){
+      chunk.forEach(g=>{
+        if(!detailsByAppId.has(String(g.app_id))){
+          const fallback={app_id:Number(g.app_id),title:g.title,release_date:"",developer:"",publisher:"",description:""};
+          detailsByAppId.set(String(g.app_id),fallback);
+          g.details_cached=true; refreshGameSyncState(g);
+          applyDetails(g.app_id,fallback);
+        }
+      });
+    }
+  });
+  detailPromises=jobs;
+  await Promise.all(jobs);
+  refreshAllSyncStates();
+}
+
+
+function buildPrintPages(list){
+  // Normal/background builder. Keep this synchronous because artwork resolution
+  // can call it many times while the library is syncing.
+  const chunks=[];
+  for(let i=0;i<list.length;i+=9) chunks.push(list.slice(i,i+9));
+  printPages.innerHTML=chunks.map((chunk,pageIndex)=>{
+    const front=chunk.map(g=>{
+      const horizontalClass=g.artwork_horizontal ? "art-horizontal" : "";
+      const scale=g.artwork_horizontal ? (88/63).toFixed(6) : "";
+      return `<div class="print-card print-front" data-appid="${g.app_id}"><img src="${g.artwork_url||''}" class="${horizontalClass}" ${scale?`style="--horizontal-art-scale:${scale}"`:''}></div>`;
+    }).join('');
+    // Duplex alignment: with portrait flip-on-long-edge, the physical back
+    // is mirrored horizontally. Do NOT rely on DOM order alone for partial
+    // rows: when a filtered print contains 1 or 2 cards, the browser can
+    // otherwise place them in the same columns. Assign the exact mirrored
+    // grid position explicitly for every card.
+    const back=chunk.map((g,i)=>{
+      const col=3-(i%3); // Mirror every row horizontally for duplex printing.
+      const row=Math.floor(i/3)+1;
+      return `<div class="print-card print-back" data-appid="${g.app_id}" style="grid-column:${col};grid-row:${row};"><div class="back-header"><h2 class="${titleClass(g.title)}">${escapeHtml(g.title)}</h2><div class="print-year detail-block" id="print-year-${g.app_id}"></div><div class="print-app-id">APP ID · ${g.app_id}</div></div><div class="back-body"><div class="meta-grid"><div class="detail-cell detail-block"><div class="meta">DEVELOPER</div><div class="value print-value" id="print-dev-${g.app_id}"></div></div><div class="detail-cell detail-block"><div class="meta">PUBLISHER</div><div class="value print-value" id="print-pub-${g.app_id}"></div></div></div><div class="content-group"><div class="detail-block about-block"><div class="meta">ABOUT</div><div id="print-desc-${g.app_id}" class="desc print-desc"></div></div><div class="optional-grid"><div class="optional-cell detail-block" id="print-features-block-${g.app_id}" style="display:none"><div class="meta">FEATURES</div><div id="print-features-${g.app_id}" class="optional-value"></div></div></div></div></div><div class="back-footer"><div class="print-bottom"><div class="datamatrix-mark" aria-hidden="true">${dataMatrixSvg(g.app_id)}</div></div></div></div>`;
+    }).join('');
+    return `<section class="print-sheet print-front-sheet">${front}</section><section class="print-sheet print-back-sheet">${back}</section>`;
+  }).join('');
+  list.forEach(g=>{ const d=detailsByAppId.get(String(g.app_id)); if(d) updatePrintDetails(g.app_id,d); });
+}
+
+function printDetailsMarkup(g, d, localPrintIndex=null){
+  const appid=String(g.app_id);
+  const release=hasDetailValue(d?.release_date);
+  const developer=hasDetailValue(d?.developer);
+  const publisher=hasDetailValue(d?.publisher);
+  const description=hasDetailValue(d?.description);
+  const featureList=Array.isArray(d?.features) ? d.features.filter(hasDetailValue) : [];
+  const screenFeatures=document.querySelector(`#features-block-${appid}`);
+  const featuresVisible=featureList.length>0 && (!screenFeatures || getComputedStyle(screenFeatures).display!=='none');
+  const year=release ? `Release date · ${escapeHtml(d.release_date)}` : '';
+  const dev=developer ? escapeHtml(d.developer) : '';
+  const pub=publisher ? escapeHtml(d.publisher) : '';
+  const desc=description ? escapeHtml(d.description) : '';
+  const features=featureList.length ? escapeHtml(featureList.join(' · ')) : '';
+  const horizontalClass=g.artwork_horizontal ? 'art-horizontal' : '';
+  const scale=g.artwork_horizontal ? (88/63).toFixed(6) : '';
+  // Print position is local to each 9-card sheet. Using the global index here
+  // makes cards on the second sheet start at rows 4–6 and causes Chromium to
+  // push the reverse cards to the bottom/next page.
+  const printIndex=Number.isInteger(localPrintIndex) ? localPrintIndex : Number(g.__printIndex)||0;
+  const col=3-(printIndex%3);
+  const row=Math.floor(printIndex/3)+1;
+
+  // V77: the printed reverse uses the same semantic component classes as the
+  // viewport reverse, but deliberately does NOT inherit the viewport `.back` class
+  // because `.back` applies the 180deg flip transform. Print CSS handles physical units/positioning.
+  const back=`<div class="print-card print-back" data-appid="${appid}" style="grid-column:${col};grid-row:${row};">
+    <div class="back-header">
+      <h2 class="${titleClass(g.title)}">${escapeHtml(g.title)}</h2>
+      <div class="year detail-block"${release?'':' style="display:none"'}>${year}</div>
+      <div class="app-id-header">APP ID · ${appid}</div>
+    </div>
+    <div class="back-body">
+      <div class="meta-grid">
+        <div class="detail-cell detail-block"${developer?'':' style="display:none"'}><div class="meta">DEVELOPER</div><div class="value">${dev}</div></div>
+        <div class="detail-cell detail-block"${publisher?'':' style="display:none"'}><div class="meta">PUBLISHER</div><div class="value">${pub}</div></div>
+      </div>
+      <div class="content-group">
+        <div class="detail-block about-block"${description?'':' style="display:none"'}><div class="meta">ABOUT</div><div class="desc">${desc}</div></div>
+        <div class="optional-grid"><div class="optional-cell detail-block"${featuresVisible?'':' style="display:none"'}><div class="meta">FEATURES</div><div class="optional-value">${features}</div></div></div>
+      </div>
+    </div>
+    <div class="back-footer"><div class="print-bottom"><div class="datamatrix-mark" aria-hidden="true">${dataMatrixSvg(g.app_id)}</div></div></div>
+  </div>`;
+  return {
+    front:`<div class="print-card print-front" data-appid="${appid}"><img src="${g.artwork_url||''}" class="${horizontalClass}" ${scale?`style="--horizontal-art-scale:${scale}"`:''}></div>`,
+    back
+  };
+}
+
+async function buildPrintPagesWithProgress(list, onPageProgress){
+  const chunks=[];
+  for(let i=0;i<list.length;i+=9) chunks.push(list.slice(i,i+9));
+  printPages.innerHTML="";
+  const totalPages=chunks.length*2;
+  let preparedPages=0;
+
+  // Precompute the exact print markup once. This avoids hundreds of DOM queries
+  // and style recalculations that the old updatePrintDetails path performed
+  // while the print DOM was being assembled.
+  list.forEach((g,i)=>{ g.__printIndex=i; });
+  try {
+    for(let pageIndex=0;pageIndex<chunks.length;pageIndex++){
+      const chunk=chunks[pageIndex];
+      const front=[];
+      const back=[];
+      for(let localIndex=0;localIndex<chunk.length;localIndex++){
+        const g=chunk[localIndex];
+        const d=detailsByAppId.get(String(g.app_id)) || {title:g.title};
+        const markup=printDetailsMarkup(g,d,localIndex);
+        front.push(markup.front);
+        back.push(markup.back);
+      }
+      printPages.insertAdjacentHTML("beforeend", `<section class="print-sheet print-front-sheet">${front.join('')}</section><section class="print-sheet print-back-sheet">${back.join('')}</section>`);
+      preparedPages=Math.min(totalPages,preparedPages+2);
+      if(onPageProgress) onPageProgress(preparedPages,totalPages);
+      // Yield once per physical front/back pair so the UI stays responsive and
+      // the page counter is genuinely live instead of jumping at the end.
+      await nextPaint();
+    }
+  } finally {
+    list.forEach(g=>{ delete g.__printIndex; });
+  }
+}
+
+function updatePrintDetails(appid,d){
+  const y=document.querySelector(`#print-year-${appid}`);
+  const dev=document.querySelector(`#print-dev-${appid}`);
+  const pub=document.querySelector(`#print-pub-${appid}`);
+  const desc=document.querySelector(`#print-desc-${appid}`);
+  const features=document.querySelector(`#print-features-${appid}`);
+  const featuresBlock=document.querySelector(`#print-features-block-${appid}`);
+  const yearBlock=y?.closest(".detail-block");
+  const devBlock=dev?.closest(".detail-block");
+  const pubBlock=pub?.closest(".detail-block");
+  const descBlock=desc?.closest(".detail-block");
+  const release=hasDetailValue(d.release_date);
+  const developer=hasDetailValue(d.developer);
+  const publisher=hasDetailValue(d.publisher);
+  const description=hasDetailValue(d.description);
+  if(y){ y.textContent=release ? `Release date · ${d.release_date}` : ""; if(yearBlock) yearBlock.style.display=release?"":"none"; }
+  if(dev){ dev.textContent=developer ? d.developer : ""; if(devBlock) devBlock.style.display=developer?"":"none"; }
+  if(pub){ pub.textContent=publisher ? d.publisher : ""; if(pubBlock) pubBlock.style.display=publisher?"":"none"; }
+  if(desc){
+    desc.textContent=description ? d.description : "";
+    desc.dataset.fitted="";
+    if(descBlock) descBlock.style.display=description ? "flex" : "none";
+  }
+  const featureList=Array.isArray(d?.features)?d.features.filter(hasDetailValue):[];
+  if(features){
+    features.textContent=featureList.join(" · ");
+    if(featuresBlock) featuresBlock.style.display=featureList.length?"":"none";
+  }
+  // V68: print must use the same feature-visibility decision as the
+  // fully-built screen card. The old print-side measurement ran while
+  // #printPages was display:none, so every print card looked too small and
+  // FEATURES was incorrectly hidden.
+  syncPrintFeatureVisibility(appid);
+}
+
+
+
+const BACK_DESIGN_DEFAULTS={gameTitle:'#f3f5f7',sectionTitle:'#a3adb8',content:'#e3e7eb',appId:'#a2acb6',innerFrame:'#59636e',line:'#68727d',background:null,backgroundName:null,backgroundBrightness:100,backgroundSaturation:100,backgroundHue:0};
+let backDesignDraft={...BACK_DESIGN_DEFAULTS};
+let temporaryBackDesignDraft=null;
+let temporaryGlobalBackDesign=null;
+function clampNumber(v,min,max,fallback){
+  const n=Number(v);
+  return Number.isFinite(n)?Math.min(max,Math.max(min,n)):fallback;
+}
+function normalizeHex(v,fallback){
+  const s=String(v||'').trim();
+  return /^#[0-9a-fA-F]{6}$/.test(s)?s.toLowerCase():fallback;
+}
+function loadBackDesign(){
+  try{
+    const saved=JSON.parse(localStorage.getItem('gamebinder.backDesign')||'null');
+    if(saved && typeof saved==='object') backDesignDraft={...BACK_DESIGN_DEFAULTS,...saved};
+    delete backDesignDraft.matrix;
+  }catch(_){ backDesignDraft={...BACK_DESIGN_DEFAULTS}; }
+  applyBackDesign(backDesignDraft,false);
+}
+function applyBackDesign(cfg,refreshMatrix=true){
+  const root=document.documentElement;
+  root.style.setProperty('--back-title-color',normalizeHex(cfg.gameTitle,BACK_DESIGN_DEFAULTS.gameTitle));
+  root.style.setProperty('--back-section-color',normalizeHex(cfg.sectionTitle,BACK_DESIGN_DEFAULTS.sectionTitle));
+  root.style.setProperty('--back-content-color',normalizeHex(cfg.content,BACK_DESIGN_DEFAULTS.content));
+  root.style.setProperty('--back-app-id-color',normalizeHex(cfg.appId,BACK_DESIGN_DEFAULTS.appId));
+  root.style.setProperty('--back-inner-frame-color',normalizeHex(cfg.innerFrame,BACK_DESIGN_DEFAULTS.innerFrame));
+  root.style.setProperty('--back-frame-color','#7d8791');
+  root.style.setProperty('--back-line-color',normalizeHex(cfg.line,BACK_DESIGN_DEFAULTS.line));
+  root.style.setProperty('--back-matrix-color','#000000');
+  const brightness=clampNumber(cfg.backgroundBrightness,0,200,BACK_DESIGN_DEFAULTS.backgroundBrightness);
+  const saturation=clampNumber(cfg.backgroundSaturation,0,200,BACK_DESIGN_DEFAULTS.backgroundSaturation);
+  const hue=clampNumber(cfg.backgroundHue,-180,180,BACK_DESIGN_DEFAULTS.backgroundHue);
+  root.style.setProperty('--back-bg-brightness',`${brightness}%`);
+  root.style.setProperty('--back-bg-saturation',`${saturation}%`);
+  root.style.setProperty('--back-bg-hue',`${hue}deg`);
+  if(bdBgBrightness) bdBgBrightness.value=String(brightness);
+  if(bdBgSaturation) bdBgSaturation.value=String(saturation);
+  if(bdBgHue) bdBgHue.value=String(hue);
+  if(bdBgBrightnessValue) bdBgBrightnessValue.textContent=`${brightness}%`;
+  if(bdBgSaturationValue) bdBgSaturationValue.textContent=`${saturation}%`;
+  if(bdBgHueValue) bdBgHueValue.textContent=`${hue}°`;
+  const bg=cfg.background||null;
+  root.style.setProperty('--back-bg-image',bg?`url(${JSON.stringify(bg)})`:`url('/gamebinder-starfield-neutral.jpg')`);
+  if(refreshMatrix){ dataMatrixCache.clear(); renderDataMatrixColors(); }
+  updateBackDesignPreview();
+}
+function renderDataMatrixColors(){
+  document.querySelectorAll('.datamatrix-mark').forEach(el=>{
+    const id=el.closest('[data-appid]')?.dataset?.appid;
+    if(id) el.innerHTML=dataMatrixSvg(id);
+  });
+  if(bdPreviewMatrix) bdPreviewMatrix.innerHTML=dataMatrixSvg('123456');
+}
+function updateBackDesignPreview(){
+  if(!backDesignSettings) return;
+  const bg=backDesignDraft.background||null;
+  bdBgPreview.style.backgroundImage=bg?`url(${JSON.stringify(bg)})`:`url('/gamebinder-starfield-neutral.jpg')`;
+  bdBgPreview.style.filter=`brightness(${clampNumber(backDesignDraft.backgroundBrightness,0,200,100)}%) saturate(${clampNumber(backDesignDraft.backgroundSaturation,0,200,100)}%) hue-rotate(${clampNumber(backDesignDraft.backgroundHue,-180,180,0)}deg)`;
+  bdBgName.textContent=bg?(backDesignDraft.backgroundName||'Custom background image'):'Default GameBinder background';
+  if(bdBgStatus && !bg) bdBgStatus.textContent='Any image is accepted and will be cropped to 1061 × 1483 px.';
+  for(const [k,input] of Object.entries(bdInputs)) input.value=normalizeHex(backDesignDraft[k],BACK_DESIGN_DEFAULTS[k]);
+  if(bdPreviewMatrix) bdPreviewMatrix.innerHTML=dataMatrixSvg('123456');
+}
+function openBackDesign(){
+  const isTemporary=Boolean(temporaryCardGame);
+  if(isTemporary){
+    temporaryGlobalBackDesign={...backDesignDraft};
+    temporaryBackDesignDraft={...(temporaryBackDesignDraft||backDesignDraft)};
+    backDesignDraft={...temporaryBackDesignDraft};
+  }else{
+    backDesignDraft={...backDesignDraft};
+  }
+  updateBackDesignPreview();
+  backDesignSettings.classList.add('open'); backDesignSettings.style.display='flex'; backDesignSettings.setAttribute('aria-hidden','false');
+}
+function closeBackDesign(){ backDesignSettings.classList.remove('open'); backDesignSettings.style.display='none'; backDesignSettings.setAttribute('aria-hidden','true'); }
+function saveBackDesign(){
+  const saved={...backDesignDraft}; delete saved.matrix;
+  if(temporaryCardGame){
+    temporaryBackDesignDraft=saved;
+    backDesignDraft={...saved};
+    applyBackDesign(backDesignDraft,true);
+    closeBackDesign();
+    return;
+  }
+  backDesignDraft=saved; localStorage.setItem('gamebinder.backDesign',JSON.stringify(saved)); applyBackDesign(backDesignDraft,true); closeBackDesign();
+}
+function resetBackDesign(){ backDesignDraft={...BACK_DESIGN_DEFAULTS}; applyBackDesign(backDesignDraft,true); updateBackDesignPreview(); }
+backDesign?.addEventListener('click',openBackDesign);
+backDesignSettings?.addEventListener('click',e=>{ if(e.target===backDesignSettings) document.querySelector('#bd-cancel')?.click(); });
+document.querySelector('#bd-cancel')?.addEventListener('click',()=>{
+  if(temporaryCardGame){
+    backDesignDraft={...(temporaryBackDesignDraft||temporaryGlobalBackDesign||BACK_DESIGN_DEFAULTS)};
+    applyBackDesign(backDesignDraft,true);
+    closeBackDesign();
+    return;
+  }
+  loadBackDesign(); closeBackDesign();
+});
+document.querySelector('#bd-apply')?.addEventListener('click',saveBackDesign);
+document.querySelector('#bd-reset')?.addEventListener('click',resetBackDesign);
+Object.entries(bdInputs).forEach(([key,input])=>input?.addEventListener('input',()=>{
+  backDesignDraft[key]=input.value;
+  applyBackDesign(backDesignDraft,true);
+}));
+bdBgBrightness?.addEventListener('input',()=>{ backDesignDraft.backgroundBrightness=clampNumber(bdBgBrightness.value,0,200,100); applyBackDesign(backDesignDraft,false); updateBackDesignPreview(); });
+bdBgSaturation?.addEventListener('input',()=>{ backDesignDraft.backgroundSaturation=clampNumber(bdBgSaturation.value,0,200,100); applyBackDesign(backDesignDraft,false); updateBackDesignPreview(); });
+bdBgHue?.addEventListener('input',()=>{ backDesignDraft.backgroundHue=clampNumber(bdBgHue.value,-180,180,0); applyBackDesign(backDesignDraft,false); updateBackDesignPreview(); });
+bdBgChoose?.addEventListener('click',()=>bdBgFile?.click());
+const BACKGROUND_TARGET_W=1061, BACKGROUND_TARGET_H=1483;
+async function prepareBackgroundImage(file){
+  const sourceUrl=URL.createObjectURL(file);
+  try{
+    const img=await new Promise((resolve,reject)=>{
+      const image=new Image();
+      image.onload=()=>resolve(image);
+      image.onerror=()=>reject(new Error('Could not read image.'));
+      image.src=sourceUrl;
+    });
+    const sw=img.naturalWidth, sh=img.naturalHeight;
+    if(!sw || !sh) throw new Error('Invalid image dimensions.');
+
+    const canvas=document.createElement('canvas');
+    canvas.width=BACKGROUND_TARGET_W;
+    canvas.height=BACKGROUND_TARGET_H;
+    const ctx=canvas.getContext('2d',{alpha:false});
+    if(!ctx) throw new Error('Could not prepare image canvas.');
+
+    // Cover: preserve the source aspect ratio and crop only the excess.
+    const scale=Math.max(BACKGROUND_TARGET_W/sw,BACKGROUND_TARGET_H/sh);
+    const dw=sw*scale, dh=sh*scale;
+    const dx=(BACKGROUND_TARGET_W-dw)/2, dy=(BACKGROUND_TARGET_H-dh)/2;
+    ctx.fillStyle='#1b2026';
+    ctx.fillRect(0,0,BACKGROUND_TARGET_W,BACKGROUND_TARGET_H);
+    ctx.imageSmoothingEnabled=true;
+    ctx.imageSmoothingQuality='high';
+    ctx.drawImage(img,dx,dy,dw,dh);
+
+    // WebP is substantially smaller for most photographic backgrounds; fall back to JPEG.
+    let dataUrl=canvas.toDataURL('image/webp',0.90);
+    if(!dataUrl.startsWith('data:image/webp')) dataUrl=canvas.toDataURL('image/jpeg',0.90);
+    return {dataUrl,sw,sh};
+  }finally{
+    URL.revokeObjectURL(sourceUrl);
+  }
+}
+bdBgFile?.addEventListener('change',async()=>{
+  const file=bdBgFile.files?.[0]; if(!file) return;
+  try{
+    bdBgChoose.disabled=true;
+    if(bdBgStatus) bdBgStatus.textContent='Preparing background…';
+    const prepared=await prepareBackgroundImage(file);
+    backDesignDraft.background=prepared.dataUrl;
+    backDesignDraft.backgroundName=file.name;
+    applyBackDesign(backDesignDraft,true);
+    updateBackDesignPreview();
+    if(bdBgStatus){
+      const lowRes=prepared.sw<BACKGROUND_TARGET_W || prepared.sh<BACKGROUND_TARGET_H;
+      bdBgStatus.textContent=lowRes
+        ? `Prepared at ${BACKGROUND_TARGET_W} × ${BACKGROUND_TARGET_H} px. Warning: source image (${prepared.sw} × ${prepared.sh}) is smaller than the card background and may print soft.`
+        : `Prepared at ${BACKGROUND_TARGET_W} × ${BACKGROUND_TARGET_H} px using centered crop.`;
+      bdBgStatus.style.color=lowRes?'#e6c66a':'#aab3bd';
+    }
+  }catch(e){
+    if(bdBgStatus) bdBgStatus.textContent='Could not prepare the selected image.';
+    alert('Could not load or prepare the selected background image.');
+  }finally{
+    bdBgChoose.disabled=false;
+    bdBgFile.value='';
+  }
+});
+loadBackDesign();
+window.addEventListener("pagehide",()=>{
+  if(featureMeasureHost?.isConnected) featureMeasureHost.remove();
+  featureMeasureHost=null;
+},{once:true});
+
+function render(){
+  const q=search.value.toLowerCase();
+  let list=games.filter(g=>{ const excluded=excludedAppIds.has(String(g.app_id)); return !g.artwork_failed && g.title.toLowerCase().includes(q) && (showExcluded ? excluded : !excluded); });
+  if(sort.value==="title") list.sort((a,b)=>a.title.localeCompare(b.title));
+  if(sort.value==="playtime") list.sort((a,b)=>b.playtime_minutes-a.playtime_minutes);
+  grid.innerHTML=list.map(g=>{
+    const artwork=`<img src="${g.artwork_url || ""}" alt="" data-appid="${g.app_id}" style="display:none">`;
+    return `<div class="wrap" data-id="${g.app_id}">
+      <div class="card">
+        <div class="face front" data-appid="${g.app_id}">${artwork}</div>
+        <div class="face back">
+          <div class="back-header"><h2 class="${titleClass(g.title)}">${escapeHtml(g.title)}</h2><div class="year detail-block" id="year-${g.app_id}">Release date unavailable</div><div class="app-id-header">APP ID · ${g.app_id}</div></div>
+          <div class="back-body">
+          <div class="meta-grid">
+            <div class="detail-cell detail-block"><div class="meta">DEVELOPER</div><div class="value" id="dev-${g.app_id}">Loading…</div></div>
+            <div class="detail-cell detail-block"><div class="meta">PUBLISHER</div><div class="value" id="pub-${g.app_id}">Loading…</div></div>
+          </div>
+          <div class="content-group">
+          <div class="detail-block about-block" style="display:none"><div class="meta">ABOUT</div><div class="desc" id="desc-${g.app_id}"></div></div>
+          <div class="optional-grid"><div class="optional-cell detail-block" id="features-block-${g.app_id}" style="display:none"><div class="meta">FEATURES</div><div class="optional-value" id="features-${g.app_id}"></div></div></div>
+          </div>
+          </div>
+          <div class="back-footer"><div class="print-bottom"><div class="datamatrix-mark" aria-hidden="true">${dataMatrixSvg(g.app_id)}</div></div></div>
+        </div>
+      </div>
+    </div>`;
+  }).join("");
+  // Print pages are built only when printing starts; keeping a second full DOM
+  // tree synchronized during normal browsing was a major source of work.
+  // Re-apply already cached details after every render (including search/sort).
+  // Rendering replaces the card DOM, so the previous text nodes disappear;
+  // never show Loading… when the details are already in the in-memory cache.
+  list.forEach(g=>{
+    const d=detailsByAppId.get(String(g.app_id));
+    if(d) applyDetails(g.app_id,d);
+  });
+  flippedCards.clear();
+  list.forEach(g=>{
+    const img=document.querySelector(`.front[data-appid="${g.app_id}"] img`);
+    if(img){
+      if(g.artwork_resolved) applyArtworkOrientation(g,img);
+      startArtworkResolution(g,img,img.closest(".front"));
+    }
+  });
+  count.textContent=list.length;
+  pages.textContent=Math.max(1,Math.ceil(list.length/9));
+  updateExcludedButton();
+  empty.style.display=list.length?"none":"block";
+  refreshAllSyncStates();
+}
+function openAppIdGenerator(){
+  if(!appIdGenerator) return;
+  appIdGenerator.classList.add("open");
+  appIdGenerator.style.display="flex";
+  appIdGenerator.setAttribute("aria-hidden","false");
+  appIdGeneratorStatus.textContent="";
+  appIdGeneratorInput.value="";
+  setTimeout(()=>appIdGeneratorInput.focus(),30);
+}
+function closeAppIdGenerator(){
+  if(!appIdGenerator) return;
+  appIdGenerator.classList.remove("open");
+  appIdGenerator.style.display="none";
+  appIdGenerator.setAttribute("aria-hidden","true");
+}
+function extractAppIdInput(value){
+  const raw=String(value||"").trim();
+  if(/^\d+$/.test(raw) && Number(raw)>0) return raw;
+  const m=raw.match(/\/app\/(\d+)(?:[/?#]|$)/i);
+  return m && Number(m[1])>0 ? m[1] : "";
+}
+function temporaryCardMarkup(g,d){
+  const appid=String(g.app_id);
+  const release=hasDetailValue(d?.release_date);
+  const developer=hasDetailValue(d?.developer);
+  const publisher=hasDetailValue(d?.publisher);
+  const description=hasDetailValue(d?.description);
+  const featureList=Array.isArray(d?.features)?d.features.filter(hasDetailValue):[];
+  const horizontalClass=g.artwork_horizontal ? "art-horizontal" : "";
+  const scale=g.artwork_horizontal ? (88/63).toFixed(6) : "";
+  return `<div class="appid-preview-wrap" id="appid-preview-wrap" title="Click to flip">
+    <div class="card" id="appid-preview-card">
+      <div class="face front" data-appid="${appid}"><img src="${escapeHtml(g.artwork_url||"")}" class="${horizontalClass}" ${scale?`style="--horizontal-art-scale:${scale}"`:""}></div>
+      <div class="face back">
+        <div class="back-header"><h2 class="${titleClass(g.title)}">${escapeHtml(g.title)}</h2><div class="year detail-block"${release?'':' style="display:none"'}>${release?`Release date · ${escapeHtml(d.release_date)}`:''}</div><div class="app-id-header">APP ID · ${appid}</div></div>
+        <div class="back-body">
+          <div class="meta-grid">
+            <div class="detail-cell detail-block"${developer?'':' style="display:none"'}><div class="meta">DEVELOPER</div><div class="value">${developer?escapeHtml(d.developer):''}</div></div>
+            <div class="detail-cell detail-block"${publisher?'':' style="display:none"'}><div class="meta">PUBLISHER</div><div class="value">${publisher?escapeHtml(d.publisher):''}</div></div>
+          </div>
+          <div class="content-group">
+            <div class="detail-block about-block"${description?'':' style="display:none"'}><div class="meta">ABOUT</div><div class="desc">${description?escapeHtml(d.description):''}</div></div>
+            <div class="optional-grid"><div class="optional-cell detail-block"${featureList.length?'':' style="display:none"'}><div class="meta">FEATURES</div><div class="optional-value">${featureList.length?escapeHtml(featureList.join(" · ")):''}</div></div></div>
+          </div>
+        </div>
+        <div class="back-footer"><div class="print-bottom"><div class="datamatrix-mark" aria-hidden="true">${dataMatrixSvg(appid)}</div></div></div>
+      </div>
+    </div>
+  </div>`;
+}
+function fitTemporaryCard(){
+  const wrap=document.querySelector("#appid-preview-wrap");
+  const group=wrap?.querySelector(".content-group");
+  const features=wrap?.querySelector(".features-block");
+  if(!group) return;
+  const optional=group.querySelector(".optional-cell");
+  if(!optional) return;
+  const optionalGrid=optional.closest(".optional-grid");
+  if(!optionalGrid) return;
+  if(!optional.textContent.trim()){ optionalGrid.style.display="none"; return; }
+  optionalGrid.style.display="";
+  const available=group.clientHeight;
+  const natural=measureNaturalContent(group,group.clientWidth,false);
+  if(natural>available+1) optionalGrid.style.display="none";
+}
+function getSavedGlobalBackDesign(){
+  try{
+    const saved=JSON.parse(localStorage.getItem('gamebinder.backDesign')||'null');
+    if(saved && typeof saved==='object') return {...BACK_DESIGN_DEFAULTS,...saved};
+  }catch(_){}
+  return {...BACK_DESIGN_DEFAULTS};
+}
+function openTemporaryCard(g,d){
+  // A temporary card inherits the currently saved library Back Design at creation time.
+  // Its later edits remain temporary and never overwrite the library design.
+  temporaryGlobalBackDesign={...getSavedGlobalBackDesign()};
+  temporaryBackDesignDraft={...temporaryGlobalBackDesign};
+  backDesignDraft={...temporaryBackDesignDraft};
+  applyBackDesign(backDesignDraft,false);
+  temporaryCardGame=g;
+  pendingPrintGames=[g];
+  appIdPreviewStage.innerHTML=temporaryCardMarkup(g,d);
+  appIdPreviewSubtitle.textContent=`${d.title || g.title} · App ID ${g.app_id} · Not added to your library`;
+  appIdPreview.classList.add("open");
+  appIdPreview.style.display="flex";
+  appIdPreview.setAttribute("aria-hidden","false");
+  const wrap=document.querySelector("#appid-preview-wrap");
+  const card=document.querySelector("#appid-preview-card");
+  wrap?.addEventListener("click",()=>{
+    card?.classList.remove("click-feedback");
+    void card?.offsetWidth;
+    card?.classList.add("click-feedback");
+    setTimeout(()=>card?.classList.remove("click-feedback"),320);
+    card?.classList.toggle("flip");
+  });
+  setTimeout(()=>fitTemporaryCard(),30);
+}
+function closeTemporaryCard(){
+  if(temporaryCardGame && !getGame(temporaryCardGame.app_id)) detailsByAppId.delete(String(temporaryCardGame.app_id));
+  const restoreBackDesign=temporaryGlobalBackDesign ? {...temporaryGlobalBackDesign} : null;
+  pendingPrintGames=null;
+  temporaryCardGame=null;
+  temporaryBackDesignDraft=null;
+  temporaryGlobalBackDesign=null;
+  if(restoreBackDesign){
+    backDesignDraft=restoreBackDesign;
+    applyBackDesign(backDesignDraft,true);
+  }
+  if(appIdPreviewStage) appIdPreviewStage.innerHTML="";
+  if(!appIdPreview) return;
+  appIdPreview.classList.remove("open");
+  appIdPreview.style.display="none";
+  appIdPreview.setAttribute("aria-hidden","true");
+}
+function openPrintSettingsForGames(list){
+  if(!Array.isArray(list) || !list.length) return;
+  pendingPrintGames=list;
+  printPaperSize.value=selectedPrintPaper;
+  printSettings.classList.add("open");
+  printSettings.style.display="flex";
+  printSettings.setAttribute("aria-hidden","false");
+}
+async function generateCardByAppId(){
+  const appid=extractAppIdInput(appIdGeneratorInput?.value);
+  if(!appid){
+    appIdGeneratorStatus.textContent="Enter a valid Steam App ID or Steam game link.";
+    appIdGeneratorInput?.focus();
+    return;
+  }
+  appIdGeneratorCreate.disabled=true;
+  appIdGeneratorCancel.disabled=true;
+  appIdGeneratorStatus.textContent="Fetching Steam details and artwork…";
+  try{
+    const detailsResponse=await fetch(`/api/details-batch?appids=${encodeURIComponent(appid)}`);
+    if(!detailsResponse.ok) throw new Error(`Steam details HTTP ${detailsResponse.status}`);
+    const detailsPayload=await detailsResponse.json();
+    const d=detailsPayload?.details?.[appid];
+    if(!d || !hasDetailValue(d.title)) throw new Error("Steam returned no details for that App ID.");
+
+    const artworkResponse=await fetch(`/api/artwork/${encodeURIComponent(appid)}`);
+    if(!artworkResponse.ok) throw new Error(`Steam artwork HTTP ${artworkResponse.status}`);
+    const artworkPayload=await artworkResponse.json();
+    const g={
+      app_id:Number(appid), title:String(d.title), playtime_minutes:0,
+      playtime_forever:0, icon_hash:"", artwork_url:"",
+      artwork_candidates:Array.isArray(artworkPayload.candidates)?artworkPayload.candidates:[],
+      artwork_fallback_url:"", artwork_status:"pending", artwork_failed:false,
+      artwork_resolved:false, artwork_cached:false, details_cached:true,
+      sync_state:"pending", generated_by_appid:true
+    };
+
+    // Resolve the temporary artwork without inserting this game into the library.
+    const probe=document.createElement("img");
+    probe.style.display="none";
+    document.body.appendChild(probe);
+    try{
+      const ok=await resolveArtworkForGame(g,probe,null);
+      if(!ok || !g.artwork_url) throw new Error("Steam artwork could not be resolved for this App ID.");
+    }finally{ probe.remove(); }
+    detailsByAppId.set(appid,d);
+    closeAppIdGenerator();
+    openTemporaryCard(g,d);
+  }catch(e){
+    appIdGeneratorStatus.textContent=e?.message||"Could not create the card.";
+  }finally{
+    appIdGeneratorCreate.disabled=false;
+    appIdGeneratorCancel.disabled=false;
+  }
+}
+
+async function syncSteam(){
+  games=[];
+  detailsByAppId.clear();
+  render();
+  sync.disabled=true;
+  statusMessage.textContent="Opening Steam connection window…";
+  console.log("[GameBinder] Connect button clicked");
+  try{
+    if(!window.gamebinder?.connectSteam) throw new Error("Steam connection bridge is unavailable. Restart GameBinder.");
+    const cfg=await (await fetch("/api/config",{cache:"no-store"})).json();
+    const data=await window.gamebinder.connectSteam(cfg.steamId || "");
+    if(!data?.games?.length) throw new Error("Steam returned no games from the authenticated Community page.");
+    games=data.games.map(g=>({...g,artwork_status:"pending",artwork_failed:false,artwork_resolved:false,sync_state:"pending"}));
+    rebuildGameIndex();
+    search.disabled=false; sort.disabled=false;
+    refreshAllSyncStates();
+    statusMessage.textContent=`LIVE Steam session · ${data.games.length} applications found · ${data.pages||1} page(s) scanned (not from local library cache)`;
+    render();
+    await hydrateCachedDetails();
+    await loadDetailsInBatches(games.filter(g=>!g.details_cached));
+    await waitForArtworkResolution();
+    refreshAllSyncStates();
+    print.disabled=getPrintableGames().length===0;
+    statusMessage.textContent=games.some(g=>g.sync_state==="pending")
+      ? `${getPrintableGames().length} cards ready to print · ${games.filter(g=>g.sync_state==="pending").length} pending excluded`
+      : `Synchronization complete · ${getPrintableGames().length} cards ready to print`;
+  }catch(e){
+    statusMessage.textContent="Steam connection error: "+(e?.message||e);
+  }finally{sync.disabled=false;}
+}
+
+grid.addEventListener("contextmenu",e=>{
+  const wrap=e.target.closest?.(".wrap");
+  if(!wrap || !grid.contains(wrap)) return;
+  e.preventDefault();
+  const appid=String(wrap.dataset.id);
+  contextAction.textContent=showExcluded ? "Restore to GameBinder" : "Exclude from GameBinder";
+  contextAction.onclick=()=> showExcluded ? restoreGame(appid) : excludeGame(appid);
+  contextMenu.dataset.appid=appid;
+  contextMenu.style.display="block";
+  const pad=8, rect=contextMenu.getBoundingClientRect();
+  let x=e.clientX, y=e.clientY;
+  if(x+rect.width>window.innerWidth-pad) x=window.innerWidth-rect.width-pad;
+  if(y+rect.height>window.innerHeight-pad) y=window.innerHeight-rect.height-pad;
+  contextMenu.style.left=Math.max(pad,x)+"px"; contextMenu.style.top=Math.max(pad,y)+"px";
+});
+document.addEventListener("pointerdown",e=>{ if(contextMenu.style.display!=="none" && !contextMenu.contains(e.target)) closeContextMenu(); });
+window.addEventListener("blur",closeContextMenu);
+excludedButton?.addEventListener("click",()=>{ showExcluded=!showExcluded; closeContextMenu(); render(); });
+
+grid.addEventListener("click",e=>{
+  const wrap=e.target.closest?.(".wrap");
+  if(!wrap || !grid.contains(wrap)) return;
+  const card=wrap.querySelector(".card");
+  if(!card) return;
+  card.classList.remove("click-feedback");
+  void card.offsetWidth;
+  card.classList.add("click-feedback");
+  setTimeout(()=>card.classList.remove("click-feedback"),320);
+  card.classList.toggle("flip");
+  const id=String(wrap.dataset.id);
+  if(card.classList.contains("flip")) flippedCards.add(wrap);
+  else flippedCards.delete(wrap);
+});
+
+grid.addEventListener("dblclick",e=>{
+  const wrap=e.target.closest?.(".wrap");
+  if(!wrap || !grid.contains(wrap)) return;
+  window.open("https://store.steampowered.com/app/"+wrap.dataset.id+"/","_blank");
+});
+
+function resetFlippedCardsAtViewportEdge(){
+  scrollResetRaf=0;
+  if(!flippedCards.size) return;
+  const viewportHeight=window.innerHeight;
+  for(const wrap of [...flippedCards]){
+    if(!wrap.isConnected){ flippedCards.delete(wrap); continue; }
+    const card=wrap.querySelector(".card");
+    if(!card || !card.classList.contains("flip")){ flippedCards.delete(wrap); continue; }
+    const rect=wrap.getBoundingClientRect();
+    if(rect.top <= 0 || rect.bottom >= viewportHeight){
+      card.classList.remove("flip");
+      flippedCards.delete(wrap);
+    }
+  }
+}
+window.addEventListener("scroll",()=>{
+  if(scrollResetRaf) return;
+  scrollResetRaf=requestAnimationFrame(resetFlippedCardsAtViewportEdge);
+},{passive:true});
+window.addEventListener("resize",()=>{
+  resetFlippedCardsAtViewportEdge();
+  document.querySelectorAll(".wrap[data-id]").forEach(w=>{
+    const id=w.dataset.id;
+    if(document.querySelector(`#features-${id}`)?.textContent.trim()) queueFitFeatures(id);
+  });
+},{passive:true});
+
+// EXPERIMENT: do NOT auto-load the local library cache. Every Sync Steam run must come from an authenticated Steam Community session.
+statusMessage.textContent="No cached library loaded · click Connect Steam & Sync to import the live authenticated Games page";
+if(window.gamebinder?.onSteamProgress){
+  window.gamebinder.onSteamProgress((p)=>{
+    if(!p) return;
+    if(p.stage==="parse"){
+      statusMessage.textContent=p.message||`Reading Steam Games page… ${p.games||0} games detected`;
+      const n=Number(p.games||0);
+      progressBar.style.width=Math.min(95,Math.max(5,Math.round((n/356)*95)))+"%";
+    }else if(p.message){
+      statusMessage.textContent=p.message;
+    }
+  });
+}
+if(window.gamebinder?.onPrintProgress){
+  window.gamebinder.onPrintProgress((p)=>{
+    if(!p) return;
+    const total=Number(p.total||0);
+    const printed=Math.max(0,Number(p.printed||0));
+    if(p.stage==="spooling" && total>0){
+      const pct=Math.round((printed/total)*100);
+      showPrintProgress("Printing…",pct,`${printed} / ${total} pages printed`);
+    }else if(p.stage==="dialog"){
+      showPrintProgress("Windows Print Dialog…",97,total?`0 / ${total} pages printed · waiting for Windows`:`Waiting for Windows print dialog`);
+    }else if(p.stage==="complete"){
+      showPrintProgress("Print complete",100,`${printed} / ${total} pages printed`);
+    }else if(p.stage==="submitted"){
+      showPrintProgress("Print job submitted",99,total?`Windows accepted the job · ${total} pages`:`Windows accepted the print job`);
+    }else if(p.stage==="error"){
+      showPrintProgress("Print failed",99,p.message||"Windows could not complete the print job.");
+    }
+  });
+}
+count.textContent="0";
+pages.textContent="0";
+generateAppIdButton?.addEventListener("click",openAppIdGenerator);
+appIdGeneratorCancel?.addEventListener("click",closeAppIdGenerator);
+appIdGeneratorCreate?.addEventListener("click",generateCardByAppId);
+appIdGenerator?.addEventListener("click",e=>{ if(e.target===appIdGenerator) closeAppIdGenerator(); });
+appIdGeneratorInput?.addEventListener("keydown",e=>{ if(e.key==="Enter"){ e.preventDefault(); generateCardByAppId(); } if(e.key==="Escape") closeAppIdGenerator(); });
+appIdPreviewClose?.addEventListener("click",closeTemporaryCard);
+appIdPreviewBackDesign?.addEventListener("click",openBackDesign);
+appIdPreviewPrint?.addEventListener("click",()=>openPrintSettingsForGames(temporaryCardGame?[temporaryCardGame]:[]));
+appIdPreview?.addEventListener("click",e=>{ if(e.target===appIdPreview) closeTemporaryCard(); });
+sync.addEventListener("click",syncSteam); search.addEventListener("keydown",(e)=>{ if(e.key==="Enter"){ e.preventDefault(); render(); } }); sort.addEventListener("change",render);
+
+function showPrintProgress(label, percent, countText){
+  const overlay=document.getElementById("gb-print-progress");
+  const bar=document.getElementById("gb-print-progress-bar");
+  const text=document.getElementById("gb-print-progress-label");
+  const countEl=document.getElementById("gb-print-progress-count");
+  if(!overlay) return;
+  overlay.classList.add("gb-show");
+  overlay.setAttribute("aria-hidden","false");
+  text.textContent=label||"Preparing cards…";
+  bar.style.width=Math.max(0,Math.min(100,percent||0))+"%";
+  countEl.textContent=countText||"";
+}
+function hidePrintProgress(){
+  const overlay=document.getElementById("gb-print-progress");
+  if(!overlay) return;
+  overlay.classList.remove("gb-show");
+  overlay.setAttribute("aria-hidden","true");
+}
+function nextPaint(){
+  return new Promise(resolve=>requestAnimationFrame(()=>requestAnimationFrame(resolve)));
+}
+function applyPrintPaperSize(size){
+  selectedPrintPaper=size;
+  let style=document.getElementById("dynamic-print-paper-size");
+  if(!style){ style=document.createElement("style"); style.id="dynamic-print-paper-size"; document.head.appendChild(style); }
+  const letter=size==="LETTER";
+  style.textContent=`@media print{@page{size:${letter?"letter":"A4"} portrait;margin:0}.print-sheet{width:${letter?"216":"210"}mm!important;height:${letter?"279":"297"}mm!important;padding-top:${letter?"7":"8"}mm!important}}`;
+}
+
+async function preparePrintSnapshot(listOverride=null){
+  const printable=Array.isArray(listOverride) ? listOverride : getPrintableGames();
+  const total=printable.length;
+  if(!total) throw new Error("There are no print-ready cards.");
+
+  showPrintProgress("Preparing Steam details…",3,`${total} cards ready for printing`);
+  await Promise.all(detailPromises);
+  await nextPaint();
+
+  // Work through the actual printable cards incrementally. This is intentionally
+  // done in small batches with paints between them, so progress is visible even
+  // when the images are already cached.
+  let ready=0;
+  const batchSize=12;
+  for(let i=0;i<total;i+=batchSize){
+    const batch=printable.slice(i,i+batchSize);
+    await Promise.all(batch.map(async g=>{
+      const key=String(g.app_id);
+      if(artworkPromises.has(key)){
+        await artworkPromises.get(key);
+      }
+      return g;
+    }));
+    ready=Math.min(total,i+batch.length);
+    const pct=5+Math.round((ready/total)*15);
+    showPrintProgress("Preparing artwork…",pct,`${ready} / ${total} cards checked`);
+    await nextPaint();
+  }
+
+  const totalPrintPages=Math.ceil(total/9)*2;
+  showPrintProgress("Preparing print pages…",20,`0 / ${totalPrintPages} pages prepared`);
+  // Build one front/back sheet pair at a time so the progress dialog reflects
+  // actual page preparation rather than jumping straight to 100%.
+  await buildPrintPagesWithProgress(printable,(preparedPages,totalPages)=>{
+    const pct=20+Math.round((preparedPages/totalPages)*50);
+    showPrintProgress("Preparing print pages…",pct,`${preparedPages} / ${totalPages} pages prepared`);
+  });
+  await nextPaint();
+
+  const imgs=[...document.querySelectorAll(".print-front img")];
+  let loaded=0;
+  const imgTotal=imgs.length||1;
+  const imageBatchSize=24;
+  for(let i=0;i<imgs.length;i+=imageBatchSize){
+    const batch=imgs.slice(i,i+imageBatchSize);
+    await Promise.all(batch.map(async img=>{
+      if(img.complete && img.naturalWidth>0){
+        try{ if(img.decode) await img.decode(); }catch(_){}
+        return;
+      }
+      await new Promise(resolve=>{
+        const done=()=>{img.removeEventListener("load",done);img.removeEventListener("error",done);resolve();};
+        img.addEventListener("load",done,{once:true});
+        img.addEventListener("error",done,{once:true});
+      });
+      try{ if(img.decode) await img.decode(); }catch(_){}
+    }));
+    loaded=Math.min(imgTotal,i+batch.length);
+    const pct=70+Math.round((loaded/imgTotal)*25);
+    showPrintProgress("Checking print artwork…",pct,`${loaded} / ${imgTotal} images ready`);
+    await nextPaint();
+  }
+
+  if(document.fonts && document.fonts.ready) await document.fonts.ready;
+  showPrintProgress("Ready · opening Windows Print Dialog…",97,`${total} cards · ${totalPrintPages} print pages prepared`);
+  await nextPaint();
+  return { printable, totalPrintPages };
+}
+print.addEventListener("click",()=>{
+  const printable=getPrintableGames();
+  if(!printable.length) return;
+  openPrintSettingsForGames(printable);
+});
+printCancel.addEventListener("click",()=>{
+  printSettings.classList.remove("open");
+  printSettings.style.display="none";
+  printSettings.setAttribute("aria-hidden","true");
+});
+printSettings.addEventListener("click",e=>{if(e.target===printSettings) printCancel.click();});
+printContinue.addEventListener("click",async()=>{
+  const original=print.textContent;
+  const listForPrint=Array.isArray(pendingPrintGames) ? pendingPrintGames.slice() : getPrintableGames();
+  const isTemporary=Boolean(temporaryCardGame && listForPrint.some(g=>String(g.app_id)===String(temporaryCardGame.app_id)));
+  printSettings.classList.remove("open");
+  printSettings.style.display="none";
+  printSettings.setAttribute("aria-hidden","true");
+  applyPrintPaperSize(printPaperSize.value);
+  if(!isTemporary){ print.disabled=true; print.textContent="Preparing print…"; }
+  try{
+    const prepared=await preparePrintSnapshot(listForPrint);
+    const totalPrintPages=Number(prepared?.totalPrintPages)||Math.ceil(listForPrint.length/9)*2;
+    if(window.gamebinder && typeof window.gamebinder.print==="function"){
+      await window.gamebinder.print(totalPrintPages);
+    }else{
+      window.print();
+    }
+  }catch(e){
+    statusMessage.textContent="Could not prepare print: "+(e.message||e);
+  }finally{
+    hidePrintProgress();
+    pendingPrintGames=null;
+    print.disabled=getPrintableGames().length===0;
+    print.textContent=original;
+  }
+});
+</script>
+<style id="gamebinder-credentials-style">
+#gb-credentials-overlay{position:fixed;inset:0;z-index:99999;display:none;align-items:center;justify-content:center;background:rgba(0,0,0,.82);backdrop-filter:blur(5px);font-family:"Space Grotesk",system-ui,sans-serif}
+#gb-credentials-overlay.gb-show{display:flex}
+#gb-credentials-card{width:min(460px,calc(100vw - 36px));box-sizing:border-box;padding:28px;background:#17191d;color:#f4f5f7;border:1px solid #30343b;box-shadow:0 20px 60px rgba(0,0,0,.5)}
+#gb-credentials-card h2{margin:0 0 8px;font-size:24px}
+#gb-credentials-card p{margin:0 0 22px;color:#aeb4bd;line-height:1.45}
+#gb-credentials-card label{display:block;margin:14px 0 7px;font-size:13px;color:#cbd0d8}
+#gb-credentials-card input{width:100%;box-sizing:border-box;padding:11px 12px;border:1px solid #3a3f47;background:#0f1114;color:#fff;outline:none;font:inherit}
+#gb-credentials-card button{width:100%;margin-top:20px;padding:12px;border:0;background:#f1f3f5;color:#111318;font-weight:700;cursor:pointer}
+#gb-credentials-card button:disabled{opacity:.6;cursor:wait}
+#gb-credentials-error{min-height:18px;margin-top:12px;color:#ff8585;font-size:13px}
+#gb-credentials-settings{position:fixed;right:16px;bottom:16px;z-index:1000;display:none;border:1px solid #343941;background:#17191d;color:#dfe3e8;padding:8px 12px;cursor:pointer;font:12px "Space Grotesk",system-ui,sans-serif}
+</style>
+<div id="gb-credentials-overlay" aria-hidden="true">
+  <div id="gb-credentials-card">
+    <h2>Welcome to GameBinder</h2>
+    <p>Enter your Steam ID64 or paste your direct Steam profile link. GameBinder will open Steam Community so you can sign in and import your live Games page. No Steam Web API key is required.</p>
+    <label for="gb-steam-id">Steam ID64 or Steam profile link</label>
+    <input id="gb-steam-id" type="text" inputmode="text" autocomplete="off" spellcheck="false" placeholder="76561197978030013 or https://steamcommunity.com/profiles/…/">
+    <p style="margin:10px 0 0;font-size:12px;color:#8f96a1">Steam login is handled by Steam in the GameBinder connection window. GameBinder does not ask for or store your Steam password.</p>
+    <button id="gb-save-credentials" type="button">Continue</button>
+    <div id="gb-credentials-error"></div>
+  </div>
+</div>
+<button id="gb-credentials-settings" type="button">Steam settings</button>
+<script>
+(()=> {
+  const overlay=document.getElementById('gb-credentials-overlay');
+  const steamId=document.getElementById('gb-steam-id');
+  const save=document.getElementById('gb-save-credentials');
+  const error=document.getElementById('gb-credentials-error');
+  const settings=document.getElementById('gb-credentials-settings');
+
+  function normalizeSteamInput(value){
+    const raw=String(value||'').trim();
+    if(/^\d{17}$/.test(raw)) return raw;
+    const m=raw.match(/steamcommunity\.com\/profiles\/(\d{17})(?:[\/?#]|$)/i);
+    return m ? m[1] : '';
+  }
+  function showSetup(existingId=''){
+    if(existingId) steamId.value=existingId;
+    overlay.classList.add('gb-show');
+    overlay.setAttribute('aria-hidden','false');
+    setTimeout(()=>{steamId.focus();steamId.select();},50);
+  }
+  function hideSetup(){
+    overlay.classList.remove('gb-show');
+    overlay.setAttribute('aria-hidden','true');
+    error.textContent='';
+  }
+  async function checkConfig(){
+    try{
+      const r=await fetch('/api/config',{cache:'no-store'});
+      const d=await r.json();
+      settings.style.display='block';
+      // The ID dialog is intentionally shown on every startup so the user can
+      // confirm/change the Steam account before importing the live library.
+      showSetup(d.steamId || '');
+    }catch(_){
+      settings.style.display='block';
+      showSetup();
+      error.textContent='Could not connect to GameBinder.';
+    }
+  }
+  overlay.addEventListener('click',e=>{ if(e.target===overlay) hideSetup(); });
+  save.addEventListener('click',async()=>{
+    const id=normalizeSteamInput(steamId.value);
+    error.textContent='';
+    if(!id){error.textContent='Paste a valid Steam ID64 or a direct Steam profile link.';return;}
+    steamId.value=id;
+    save.disabled=true;
+    try{
+      const r=await fetch('/api/config',{
+        method:'POST',headers:{'Content-Type':'application/json'},
+        body:JSON.stringify({steamId:id})
+      });
+      const d=await r.json();
+      if(!r.ok) throw new Error(d.error||'Could not save Steam ID.');
+      hideSetup(); settings.style.display='block';
+      // Continue directly into the live Steam import; no reload is needed.
+      if(typeof syncSteam==='function') await syncSteam();
+    }catch(x){error.textContent=x.message||'Could not save Steam ID.'}
+    finally{save.disabled=false}
+  });
+  steamId.addEventListener('keydown',e=>{if(e.key==='Enter'){e.preventDefault();save.click();}});
+  settings.addEventListener('click',async()=>{
+    const r=await fetch('/api/config',{cache:'no-store'}).catch(()=>null);
+    const d=r && r.ok ? await r.json() : {};
+    showSetup(d.steamId || '');
+  });
+  checkConfig();
+})();
+</script>
+
+
+<style id="gb-print-progress-style">
+#gb-print-progress{position:fixed;inset:0;z-index:100000;display:none;align-items:center;justify-content:center;background:rgba(0,0,0,.78);backdrop-filter:blur(5px);font-family:"Space Grotesk",system-ui,sans-serif}
+#gb-print-progress.gb-show{display:flex}
+#gb-print-progress-card{width:min(520px,calc(100vw - 36px));box-sizing:border-box;padding:28px;background:#17191d;color:#f4f5f7;border:1px solid #30343b;box-shadow:0 20px 60px rgba(0,0,0,.5)}
+#gb-print-progress-card h2{margin:0 0 8px;font-size:22px}
+#gb-print-progress-label{margin:0 0 14px;color:#aeb4bd;font-size:13px;min-height:19px}
+#gb-print-progress-label .gb-print-progress-dots{display:inline-flex;gap:2px;margin-left:5px;vertical-align:baseline}
+#gb-print-progress-label .gb-print-progress-dots i{width:3px;height:3px;border-radius:50%;background:currentColor;opacity:.25;animation:gbPrintDot 1.1s infinite ease-in-out}
+#gb-print-progress-label .gb-print-progress-dots i:nth-child(2){animation-delay:.16s}
+#gb-print-progress-label .gb-print-progress-dots i:nth-child(3){animation-delay:.32s}
+@keyframes gbPrintDot{0%,60%,100%{opacity:.22;transform:translateY(0)}30%{opacity:1;transform:translateY(-1px)}}
+#gb-print-progress-track{height:8px;background:#2a2e34;overflow:hidden}
+#gb-print-progress-bar{height:100%;width:0;background:#f1f3f5;transition:width .12s ease}
+#gb-print-progress-count{margin-top:10px;color:#cbd0d8;font-size:12px}
+</style>
+
+<div id="gb-print-progress" aria-hidden="true">
+  <div id="gb-print-progress-card">
+    <h2>Preparing print</h2>
+    <div id="gb-print-progress-label">Preparing cards…<span class="gb-print-progress-dots" aria-hidden="true"><i></i><i></i><i></i></span></div>
+    <div id="gb-print-progress-track"><div id="gb-print-progress-bar"></div></div>
+    <div id="gb-print-progress-count"></div>
+  </div>
+</div>
+
+</body>
+</html>
